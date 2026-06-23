@@ -1,451 +1,450 @@
 """
 Formula Calculator - Desktop Application
-A user-friendly GUI application for performing various mathematical calculations
-High-DPI aware with dynamic scaling for all screen resolutions
+UI redesigned after a desktop messaging app (two-panel, chat-bubble style).
 """
 
 import tkinter as tk
-from tkinter import ttk, messagebox, scrolledtext
-import json
+from tkinter import ttk, messagebox
 from formulas import FORMULAS, calculate_formula
+
+# ── Palette ─────────────────────────────────────────────────────────────────
+WHITE        = "#FFFFFF"
+BG_APP       = "#E4E6EB"
+BG_CHAT      = "#F0F2F5"
+BORDER       = "#E3E6EA"
+SEL_BG       = "#EEF2FF"
+HOV_BG       = "#F7F8FA"
+TX_PRIMARY   = "#111827"
+TX_SECONDARY = "#6B7280"
+TX_LIGHT     = "#9CA3AF"
+TX_WHITE     = "#FFFFFF"
+BLUE         = "#5B7AF5"
+BLUE_DARK    = "#4A67E3"
+ORANGE       = "#FF6B35"
+
+CATEGORIES = {
+    "Algebra":     ("#8B5CF6", "#EDE9FE"),
+    "Geometry":    ("#3B82F6", "#DBEAFE"),
+    "Physics":     ("#EF4444", "#FEE2E2"),
+    "Finance":     ("#10B981", "#D1FAE5"),
+    "Temperature": ("#F97316", "#FFEDD5"),
+    "Health":      ("#EC4899", "#FCE7F3"),
+    "General":     ("#6B7280", "#F3F4F6"),
+    "Coordinate":  ("#06B6D4", "#CFFAFE"),
+}
+
+FORMULA_CATEGORY = {
+    "Quadratic Equation":              "Algebra",
+    "Pythagorean Theorem":             "Geometry",
+    "Circle Area":                     "Geometry",
+    "Rectangle Area":                  "Geometry",
+    "Triangle Area (Heron's Formula)": "Geometry",
+    "Distance Formula":                "Coordinate",
+    "Simple Interest":                 "Finance",
+    "Compound Interest":               "Finance",
+    "Celsius to Fahrenheit":           "Temperature",
+    "Fahrenheit to Celsius":           "Temperature",
+    "Body Mass Index (BMI)":           "Health",
+    "Kinetic Energy":                  "Physics",
+    "Ohm's Law":                       "Physics",
+    "Power (Electrical)":              "Physics",
+    "Percentage":                      "General",
+    "Sphere Volume":                   "Geometry",
+}
+
+FORMULA_EQ = {
+    "Quadratic Equation":              "x = (\u2212b \u00b1 \u221a(b\u00b2\u22124ac)) / 2a",
+    "Pythagorean Theorem":             "c = \u221a(a\u00b2 + b\u00b2)",
+    "Circle Area":                     "A = \u03c0r\u00b2",
+    "Rectangle Area":                  "A = l \u00d7 w",
+    "Triangle Area (Heron's Formula)": "A = \u221a(s(s\u2212a)(s\u2212b)(s\u2212c))",
+    "Distance Formula":                "d = \u221a((x\u2082\u2212x\u2081)\u00b2 + (y\u2082\u2212y\u2081)\u00b2)",
+    "Simple Interest":                 "I = (P \u00d7 R \u00d7 T) / 100",
+    "Compound Interest":               "A = P(1 + r/n)^(nt)",
+    "Celsius to Fahrenheit":           "F = (C \u00d7 9/5) + 32",
+    "Fahrenheit to Celsius":           "C = (F \u2212 32) \u00d7 5/9",
+    "Body Mass Index (BMI)":           "BMI = weight / height\u00b2",
+    "Kinetic Energy":                  "KE = \u00bdmv\u00b2",
+    "Ohm's Law":                       "V = I \u00d7 R",
+    "Power (Electrical)":              "P = V \u00d7 I",
+    "Percentage":                      "P = (Value / Total) \u00d7 100",
+    "Sphere Volume":                   "V = (4/3)\u03c0r\u00b3",
+}
 
 
 class FormulaCalculatorApp:
     def __init__(self, root):
         self.root = root
         self.root.title("Formula Calculator")
-        
-        # Get DPI scaling factor
-        self.dpi_scale = self.calculate_dpi_scale()
-        
-        # Dynamic window sizing based on screen resolution
-        screen_width = self.root.winfo_screenwidth()
-        screen_height = self.root.winfo_screenheight()
-        
-        # Calculate window size (responsive to screen size)
-        window_width = min(int(1100 * self.dpi_scale), int(screen_width * 0.7))
-        window_height = min(int(850 * self.dpi_scale), int(screen_height * 0.8))
-        
-        self.root.geometry(f"{window_width}x{window_height}")
-        self.root.resizable(True, True)
-        
-        # Set minimum window size
-        min_width = int(800 * self.dpi_scale)
-        min_height = int(600 * self.dpi_scale)
-        self.root.minsize(min_width, min_height)
-        
-        # Set color scheme
-        self.bg_color = "#f0f0f0"
-        self.primary_color = "#2E86AB"
-        self.secondary_color = "#A23B72"
-        self.accent_color = "#F18F01"
-        self.success_color = "#06A77D"
-        
-        self.root.configure(bg=self.bg_color)
-        
-        # Initialize UI
-        self.setup_ui()
-    
-    def calculate_dpi_scale(self):
-        """
-        Calculate DPI scaling factor for high-resolution displays
-        Returns a scale factor (1.0 for normal, 1.25 for 125%, 1.5 for 150%, etc.)
-        """
+        self.root.configure(bg=BG_APP)
+
+        self.dpi = self._dpi_scale()
+
+        sw, sh = root.winfo_screenwidth(), root.winfo_screenheight()
+        w = min(self.s(1020), int(sw * 0.75))
+        h = min(self.s(700),  int(sh * 0.85))
+        root.geometry(f"{w}x{h}+{(sw - w) // 2}+{(sh - h) // 2}")
+        root.minsize(self.s(720), self.s(480))
+        root.resizable(True, True)
+
+        self.current_formula   = None
+        self.input_fields      = {}
+        self._items            = {}
+        self._selected         = None
+        self._search_var       = tk.StringVar()
+        self._search_var.trace_add("write", self._on_search)
+        self._body_canvas      = None
+        self._result_container = None
+
+        self._build()
+
+    def _dpi_scale(self):
         try:
-            # Create a temporary root to get DPI info
-            temp_root = tk.Tk()
-            
-            # Get the scaling value from tkinter
-            scaling = temp_root.tk.call('tk', 'scaling')
-            dpi = temp_root.winfo_fpixels('1i')
-            
-            temp_root.destroy()
-            
-            # Calculate scale factor (standard DPI is 96)
-            # For 2.8K (typically 192+ DPI), scale factor would be around 2.0 or higher
-            scale_factor = max(1.0, dpi / 96.0)
-            return scale_factor
-        except:
-            # Fallback to 1.0 if detection fails
+            t = tk.Tk()
+            dpi = t.winfo_fpixels("1i")
+            t.destroy()
+            return max(1.0, dpi / 96.0)
+        except Exception:
             return 1.0
-    
-    def scale(self, value):
-        """
-        Scale a value based on DPI
-        Usage: self.scale(10) for paddings, widths, heights, etc.
-        """
-        return int(value * self.dpi_scale)
-    
-    def scale_font(self, size):
-        """
-        Scale font size based on DPI
-        Usage: self.scale_font(12) for font sizes
-        """
-        return max(8, int(size * self.dpi_scale))
-        
-    def setup_ui(self):
-        """Set up the main user interface with DPI-aware scaling"""
-        # Header
-        header_frame = tk.Frame(self.root, bg=self.primary_color, height=self.scale(80))
-        header_frame.pack(fill=tk.X)
-        
-        header_label = tk.Label(
-            header_frame,
-            text="Formula Calculator",
-            font=("Arial", self.scale_font(28), "bold"),
-            bg=self.primary_color,
-            fg="white"
-        )
-        header_label.pack(pady=self.scale(15))
-        
-        subtitle_label = tk.Label(
-            header_frame,
-            text="Calculate mathematical formulas with ease",
-            font=("Arial", self.scale_font(10)),
-            bg=self.primary_color,
-            fg="white"
-        )
-        subtitle_label.pack()
-        
-        # Main content frame
-        content_frame = tk.Frame(self.root, bg=self.bg_color)
-        content_frame.pack(fill=tk.BOTH, expand=True, padx=self.scale(20), pady=self.scale(20))
-        
-        # Left panel - Formula selection
-        left_frame = tk.Frame(content_frame, bg=self.bg_color)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=False, padx=(0, self.scale(15)))
-        
-        formula_label = tk.Label(
-            left_frame,
-            text="Select Formula:",
-            font=("Arial", self.scale_font(12), "bold"),
-            bg=self.bg_color
-        )
-        formula_label.pack(anchor=tk.W, pady=(0, self.scale(10)))
-        
-        # Formula listbox with scrollbar
-        scrollbar = ttk.Scrollbar(left_frame)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        self.formula_listbox = tk.Listbox(
-            left_frame,
-            width=int(25 * (self.dpi_scale ** 0.5)),  # Adjust width for scaling
-            height=int(22 * (self.dpi_scale ** 0.5)),  # Adjust height for scaling
-            font=("Arial", self.scale_font(10)),
-            yscrollcommand=scrollbar.set,
-            bg="white",
-            selectmode=tk.SINGLE
-        )
-        self.formula_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.config(command=self.formula_listbox.yview)
-        
-        # Populate formula list
-        for formula_name in FORMULAS.keys():
-            self.formula_listbox.insert(tk.END, formula_name)
-        
-        self.formula_listbox.bind("<<ListboxSelect>>", self.on_formula_selected)
-        
-        # Right panel - Formula details and input
-        right_frame = tk.Frame(content_frame, bg="white", relief=tk.RAISED, bd=self.scale(2))
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
-        
-        # Formula name display
-        self.formula_title = tk.Label(
-            right_frame,
-            text="Select a formula",
-            font=("Arial", self.scale_font(14), "bold"),
-            bg=self.primary_color,
-            fg="white",
-            anchor=tk.W
-        )
-        self.formula_title.pack(fill=tk.X, padx=self.scale(15), pady=self.scale(10))
-        
-        # Formula description
-        self.formula_description = tk.Label(
-            right_frame,
-            text="",
-            font=("Arial", self.scale_font(9)),
-            bg="white",
-            fg="#333",
-            wraplength=self.scale(350),
-            justify=tk.LEFT,
-            anchor=tk.NW
-        )
-        self.formula_description.pack(fill=tk.X, padx=self.scale(15), pady=(self.scale(5), self.scale(15)), anchor=tk.NW)
-        
-        # Input fields frame
-        self.input_frame = tk.Frame(right_frame, bg="white")
-        self.input_frame.pack(fill=tk.BOTH, expand=True, padx=self.scale(15), pady=self.scale(10))
-        
-        # Result display
-        result_label = tk.Label(
-            right_frame,
-            text="Result:",
-            font=("Arial", self.scale_font(11), "bold"),
-            bg="white"
-        )
-        result_label.pack(anchor=tk.W, padx=self.scale(15), pady=(self.scale(10), self.scale(5)))
-        
-        self.result_display = tk.Label(
-            right_frame,
-            text="Enter values and click Calculate",
-            font=("Arial", self.scale_font(12)),
-            bg="#E8F5E9",
-            fg=self.success_color,
-            relief=tk.SUNKEN,
-            bd=self.scale(2),
-            height=2,
-            wraplength=self.scale(350),
-            justify=tk.LEFT
-        )
-        self.result_display.pack(fill=tk.X, padx=self.scale(15), pady=(0, self.scale(10)))
-        
-        # Button frame
-        button_frame = tk.Frame(right_frame, bg="white")
-        button_frame.pack(fill=tk.X, padx=self.scale(15), pady=self.scale(10))
-        
-        calculate_btn = tk.Button(
-            button_frame,
-            text="Calculate",
-            command=self.calculate,
-            bg=self.success_color,
-            fg="white",
-            font=("Arial", self.scale_font(11), "bold"),
-            padx=self.scale(20),
-            pady=self.scale(8),
-            cursor="hand2"
-        )
-        calculate_btn.pack(side=tk.LEFT, padx=(0, self.scale(10)))
-        
-        clear_btn = tk.Button(
-            button_frame,
-            text="Clear",
-            command=self.clear_inputs,
-            bg=self.secondary_color,
-            fg="white",
-            font=("Arial", self.scale_font(11), "bold"),
-            padx=self.scale(20),
-            pady=self.scale(8),
-            cursor="hand2"
-        )
-        clear_btn.pack(side=tk.LEFT, padx=(0, self.scale(10)))
-        
-        help_btn = tk.Button(
-            button_frame,
-            text="Help",
-            command=self.show_help,
-            bg=self.accent_color,
-            fg="white",
-            font=("Arial", self.scale_font(11), "bold"),
-            padx=self.scale(20),
-            pady=self.scale(8),
-            cursor="hand2"
-        )
-        help_btn.pack(side=tk.LEFT)
-        
+
+    def s(self, v):  return int(v * self.dpi)
+    def sf(self, v): return max(8, int(v * self.dpi))
+
+    def _build(self):
+        wrap = tk.Frame(self.root, bg=BG_APP)
+        wrap.pack(fill=tk.BOTH, expand=True, padx=self.s(10), pady=self.s(10))
+        win = tk.Frame(wrap, bg=WHITE)
+        win.pack(fill=tk.BOTH, expand=True)
+        self._build_titlebar(win)
+        body = tk.Frame(win, bg=WHITE)
+        body.pack(fill=tk.BOTH, expand=True)
+        sidebar = tk.Frame(body, bg=WHITE, width=self.s(275))
+        sidebar.pack(side=tk.LEFT, fill=tk.Y)
+        sidebar.pack_propagate(False)
+        self._build_sidebar(sidebar)
+        tk.Frame(body, bg=BORDER, width=1).pack(side=tk.LEFT, fill=tk.Y)
+        content = tk.Frame(body, bg=BG_CHAT)
+        content.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        self._build_content(content)
+
+    def _build_titlebar(self, parent):
+        bar = tk.Frame(parent, bg=WHITE, height=self.s(40))
+        bar.pack(fill=tk.X)
+        bar.pack_propagate(False)
+        c = tk.Canvas(bar, width=self.s(20), height=self.s(20), bg=WHITE, highlightthickness=0)
+        c.pack(side=tk.LEFT, padx=(self.s(14), self.s(6)), pady=self.s(10))
+        c.create_oval(1, 1, self.s(19), self.s(19), fill=ORANGE, outline="")
+        tk.Label(bar, text="Formula Calculator", font=("Segoe UI", self.sf(9), "bold"),
+                 bg=WHITE, fg=TX_PRIMARY).pack(side=tk.LEFT)
+        for sym, cmd in [("\u2014", None), ("\u25a1", None), ("\u2715", self.root.destroy)]:
+            b = tk.Label(bar, text=sym, font=("Segoe UI", self.sf(10)),
+                         bg=WHITE, fg=TX_SECONDARY, padx=self.s(12), pady=self.s(8), cursor="hand2")
+            b.pack(side=tk.RIGHT)
+            b.bind("<Button-1>", lambda e, fn=cmd: fn and fn())
+            b.bind("<Enter>", lambda e, w=b: w.config(bg="#F0F0F0"))
+            b.bind("<Leave>", lambda e, w=b: w.config(bg=WHITE))
+        tk.Frame(parent, bg=BORDER, height=1).pack(fill=tk.X)
+
+    def _build_sidebar(self, parent):
+        hdr = tk.Frame(parent, bg=WHITE)
+        hdr.pack(fill=tk.X, padx=self.s(14), pady=(self.s(12), self.s(6)))
+        tk.Label(hdr, text="Formulas", font=("Segoe UI", self.sf(12), "bold"),
+                 bg=WHITE, fg=TX_PRIMARY).pack(side=tk.LEFT)
+        tk.Label(hdr, text=f" {len(FORMULAS)} ", font=("Segoe UI", self.sf(8), "bold"),
+                 bg=BLUE, fg=TX_WHITE).pack(side=tk.LEFT, padx=self.s(8))
+        sb = tk.Frame(parent, bg="#F0F2F5", highlightthickness=1, highlightbackground=BORDER)
+        sb.pack(fill=tk.X, padx=self.s(12), pady=(0, self.s(8)))
+        tk.Label(sb, text="\u2315", font=("Segoe UI", self.sf(10)),
+                 bg="#F0F2F5", fg=TX_LIGHT).pack(side=tk.LEFT, padx=(self.s(8), 0))
+        self._search_entry = tk.Entry(sb, textvariable=self._search_var,
+                                      font=("Segoe UI", self.sf(9)), bg="#F0F2F5",
+                                      fg=TX_SECONDARY, relief=tk.FLAT, bd=0,
+                                      insertbackground=TX_PRIMARY)
+        self._search_entry.pack(fill=tk.X, expand=True, padx=self.s(4), pady=self.s(7))
+        self._search_entry.insert(0, "Search formulas...")
+        self._search_entry.bind("<FocusIn>",  self._search_focus_in)
+        self._search_entry.bind("<FocusOut>", self._search_focus_out)
+        lf = tk.Frame(parent, bg=WHITE)
+        lf.pack(fill=tk.BOTH, expand=True)
+        self._list_canvas = tk.Canvas(lf, bg=WHITE, highlightthickness=0)
+        vsb = ttk.Scrollbar(lf, orient="vertical", command=self._list_canvas.yview)
+        self._list_inner = tk.Frame(self._list_canvas, bg=WHITE)
+        self._list_inner.bind("<Configure>", lambda e: self._list_canvas.configure(
+            scrollregion=self._list_canvas.bbox("all")))
+        self._list_canvas.create_window((0, 0), window=self._list_inner, anchor="nw")
+        self._list_canvas.configure(yscrollcommand=vsb.set)
+        self._list_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+        self._list_canvas.bind("<MouseWheel>",
+            lambda e: self._list_canvas.yview_scroll(int(-1*(e.delta/120)), "units"))
+        self._populate_list()
+
+    def _search_focus_in(self, _):
+        if self._search_entry.get() == "Search formulas...":
+            self._search_entry.delete(0, tk.END)
+            self._search_entry.config(fg=TX_PRIMARY)
+
+    def _search_focus_out(self, _):
+        if not self._search_entry.get():
+            self._search_entry.insert(0, "Search formulas...")
+            self._search_entry.config(fg=TX_SECONDARY)
+
+    def _on_search(self, *_):
+        if not hasattr(self, "_list_inner"):
+            return
+        q = self._search_var.get()
+        self._populate_list("" if q in ("", "Search formulas...") else q)
+
+    def _populate_list(self, q=""):
+        for w in self._list_inner.winfo_children():
+            w.destroy()
+        self._items.clear()
+        for name in FORMULAS:
+            if q and q.lower() not in name.lower():
+                continue
+            cat = FORMULA_CATEGORY.get(name, "General")
+            cat_main, cat_lt = CATEGORIES.get(cat, ("#6B7280", "#F3F4F6"))
+            eq = FORMULA_EQ.get(name, "")
+            row = tk.Frame(self._list_inner, bg=WHITE, cursor="hand2")
+            row.pack(fill=tk.X)
+            bar = tk.Frame(row, bg=WHITE, width=self.s(3))
+            bar.pack(side=tk.LEFT, fill=tk.Y)
+            inner = tk.Frame(row, bg=WHITE)
+            inner.pack(side=tk.LEFT, fill=tk.X, expand=True,
+                       padx=(self.s(4), self.s(8)), pady=self.s(7))
+            av = tk.Label(inner, text=cat[0], font=("Segoe UI", self.sf(11), "bold"),
+                          bg=cat_lt, fg=cat_main, width=2, anchor=tk.CENTER)
+            av.pack(side=tk.LEFT, padx=(self.s(2), self.s(10)))
+            tf = tk.Frame(inner, bg=WHITE)
+            tf.pack(side=tk.LEFT, fill=tk.X, expand=True)
+            nl = tk.Label(tf, text=name, font=("Segoe UI", self.sf(9), "bold"),
+                          bg=WHITE, fg=TX_PRIMARY, anchor=tk.W)
+            nl.pack(anchor=tk.W)
+            el = tk.Label(tf, text=eq, font=("Segoe UI", self.sf(8)),
+                          bg=WHITE, fg=TX_SECONDARY, anchor=tk.W)
+            el.pack(anchor=tk.W)
+            bdg = tk.Label(inner, text=f"  {cat}  ", font=("Segoe UI", self.sf(7)),
+                           bg=cat_lt, fg=cat_main)
+            bdg.pack(side=tk.RIGHT, padx=self.s(4))
+            tk.Frame(self._list_inner, bg=BORDER, height=1).pack(fill=tk.X, padx=self.s(12))
+            recolor = [row, inner, tf, nl, el]
+            self._items[name] = {"row": row, "bar": bar, "inner": inner,
+                                  "tf": tf, "nl": nl, "el": el, "cat_main": cat_main}
+            for w in recolor + [av, bdg]:
+                w.bind("<Button-1>", lambda e, n=name: self._select(n))
+            for w in recolor:
+                w.bind("<Enter>",  lambda e, n=name: self._hover(n, True))
+                w.bind("<Leave>",  lambda e, n=name: self._hover(n, False))
+        self._list_canvas.configure(scrollregion=self._list_canvas.bbox("all"))
+
+    def _hover(self, name, on):
+        if name == self._selected:
+            return
+        info = self._items.get(name)
+        if not info:
+            return
+        bg = HOV_BG if on else WHITE
+        for key in ("row", "inner", "tf", "nl", "el"):
+            try: info[key].config(bg=bg)
+            except Exception: pass
+
+    def _select(self, name):
+        if self._selected and self._selected in self._items:
+            old = self._items[self._selected]
+            for key in ("row", "inner", "tf", "nl", "el"):
+                try: old[key].config(bg=WHITE)
+                except Exception: pass
+            try: old["bar"].config(bg=WHITE)
+            except Exception: pass
+        self._selected = name
+        info = self._items[name]
+        for key in ("row", "inner", "tf", "nl", "el"):
+            try: info[key].config(bg=SEL_BG)
+            except Exception: pass
+        try: info["bar"].config(bg=info["cat_main"])
+        except Exception: pass
+        self.current_formula = name
+        self._update_content(name)
+
+    def _build_content(self, parent):
+        self._empty = tk.Frame(parent, bg=BG_CHAT)
+        self._empty.place(relx=0, rely=0, relwidth=1, relheight=1)
+        tk.Label(self._empty, text="\U0001f9ee", font=("Segoe UI Emoji", self.sf(44)),
+                 bg=BG_CHAT, fg=TX_LIGHT).place(relx=0.5, rely=0.38, anchor=tk.CENTER)
+        tk.Label(self._empty, text="Select a formula to get started",
+                 font=("Segoe UI", self.sf(11)), bg=BG_CHAT, fg=TX_SECONDARY).place(
+                     relx=0.5, rely=0.47, anchor=tk.CENTER)
+        tk.Label(self._empty, text="Choose from 16 formulas in the left panel",
+                 font=("Segoe UI", self.sf(9)), bg=BG_CHAT, fg=TX_LIGHT).place(
+                     relx=0.5, rely=0.52, anchor=tk.CENTER)
+        self._active = tk.Frame(parent, bg=BG_CHAT)
+
+    def _update_content(self, name):
+        self._empty.place_forget()
+        self._active.place(relx=0, rely=0, relwidth=1, relheight=1)
+        for w in self._active.winfo_children():
+            w.destroy()
         self.input_fields = {}
-        self.current_formula = None  # Track selected formula even when focus changes
-        
-    def on_formula_selected(self, event):
-        """Handle formula selection"""
-        selection = self.formula_listbox.curselection()
-        if not selection:
-            return
-        
-        formula_name = self.formula_listbox.get(selection[0])
-        formula_data = FORMULAS[formula_name]
-        
-        # Store the current formula so it's accessible even when focus changes
-        self.current_formula = formula_name
-        
-        # Update title and description
-        self.formula_title.config(text=formula_name)
-        self.formula_description.config(
-            text=formula_data['description'],
-            wraplength=self.scale(350)
-        )
-        
-        # Clear previous input fields
-        for widget in self.input_frame.winfo_children():
-            widget.destroy()
-        self.input_fields.clear()
-        
-        # Create input fields with Tab navigation
-        entry_list = []  # Keep list for Tab navigation
-        for param in formula_data['parameters']:
-            param_frame = tk.Frame(self.input_frame, bg="white")
-            param_frame.pack(fill=tk.X, pady=self.scale(8))
-            
-            label = tk.Label(
-                param_frame,
-                text=f"{param['name']} ({param['unit']}):",
-                font=("Arial", self.scale_font(10)),
-                bg="white",
-                width=int(20 * (self.dpi_scale ** 0.5)),
-                anchor=tk.W
-            )
-            label.pack(side=tk.LEFT)
-            
-            entry = tk.Entry(
-                param_frame,
-                font=("Arial", self.scale_font(10)),
-                width=int(20 * (self.dpi_scale ** 0.5)),
-                bg="white",
-                relief=tk.SUNKEN,
-                bd=1
-            )
-            entry.pack(side=tk.LEFT, padx=(self.scale(10), 0))
-            
-            self.input_fields[param['name']] = entry
-            entry_list.append(entry)
-        
-        # Setup Tab navigation between input fields
+        fd = FORMULAS[name]
+        cat = FORMULA_CATEGORY.get(name, "General")
+        cat_main, cat_lt = CATEGORIES.get(cat, ("#6B7280", "#F3F4F6"))
+        eq = FORMULA_EQ.get(name, "")
+
+        hdr = tk.Frame(self._active, bg=WHITE, height=self.s(58))
+        hdr.pack(fill=tk.X)
+        hdr.pack_propagate(False)
+        tk.Frame(hdr, bg=cat_main, width=self.s(4)).pack(side=tk.LEFT, fill=tk.Y)
+        av = tk.Label(hdr, text=name[0], font=("Segoe UI", self.sf(14), "bold"),
+                      bg=cat_main, fg=TX_WHITE, width=2, anchor=tk.CENTER)
+        av.pack(side=tk.LEFT, padx=self.s(12), pady=self.s(9))
+        nf = tk.Frame(hdr, bg=WHITE)
+        nf.pack(side=tk.LEFT, fill=tk.Y, pady=self.s(9))
+        tk.Label(nf, text=name, font=("Segoe UI", self.sf(10), "bold"),
+                 bg=WHITE, fg=TX_PRIMARY, anchor=tk.W).pack(anchor=tk.W)
+        tk.Label(nf, text=eq, font=("Segoe UI", self.sf(8)),
+                 bg=WHITE, fg=TX_SECONDARY, anchor=tk.W).pack(anchor=tk.W)
+        tk.Label(hdr, text=f"  {cat}  ", font=("Segoe UI", self.sf(8)),
+                 bg=cat_lt, fg=cat_main).pack(side=tk.RIGHT, padx=self.s(14), pady=self.s(18))
+        tk.Frame(self._active, bg=BORDER, height=1).pack(fill=tk.X)
+
+        body = tk.Frame(self._active, bg=BG_CHAT)
+        body.pack(fill=tk.BOTH, expand=True)
+        body_canvas = tk.Canvas(body, bg=BG_CHAT, highlightthickness=0)
+        vsb = ttk.Scrollbar(body, orient="vertical", command=body_canvas.yview)
+        inner = tk.Frame(body_canvas, bg=BG_CHAT)
+        inner.bind("<Configure>", lambda e: body_canvas.configure(
+            scrollregion=body_canvas.bbox("all")))
+        body_canvas.create_window((0, 0), window=inner, anchor="nw")
+        body_canvas.configure(yscrollcommand=vsb.set)
+        body_canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        vsb.pack(side=tk.RIGHT, fill=tk.Y)
+
+        def _scroll(e):
+            body_canvas.yview_scroll(int(-1*(e.delta/120)), "units")
+        body_canvas.bind("<MouseWheel>", _scroll)
+        inner.bind("<MouseWheel>", _scroll)
+        self._body_canvas = body_canvas
+
+        self._add_recv_bubble(inner, fd["description"], "Formula")
+        entry_list = []
+        for param in fd["parameters"]:
+            e = self._add_input_bubble(inner, param["name"], param["unit"])
+            self.input_fields[param["name"]] = e
+            entry_list.append(e)
+
+        for i, e in enumerate(entry_list):
+            def _tab(ev, idx=i, lst=entry_list):
+                lst[(idx+1) % len(lst)].focus(); return "break"
+            def _stab(ev, idx=i, lst=entry_list):
+                lst[(idx-1) % len(lst)].focus(); return "break"
+            e.bind("<Tab>",       _tab)
+            e.bind("<Shift-Tab>", _stab)
+            e.bind("<Return>",    lambda ev: self._calculate())
         if entry_list:
-            for idx, entry in enumerate(entry_list):
-                # Create a closure to capture the current index and list
-                def create_tab_handler(current_idx, entries):
-                    def handle_tab(event):
-                        # Move to next field, or wrap to first
-                        next_idx = (current_idx + 1) % len(entries)
-                        entries[next_idx].focus()
-                        return "break"  # Prevent default Tab behavior
-                    return handle_tab
-                
-                def create_shift_tab_handler(current_idx, entries):
-                    def handle_shift_tab(event):
-                        # Move to previous field, or wrap to last
-                        prev_idx = (current_idx - 1) % len(entries)
-                        entries[prev_idx].focus()
-                        return "break"  # Prevent default Shift+Tab behavior
-                    return handle_shift_tab
-                
-                # Bind Tab and Shift+Tab
-                entry.bind('<Tab>', create_tab_handler(idx, entry_list))
-                entry.bind('<Shift-Tab>', create_shift_tab_handler(idx, entry_list))
-                
-                # Bind Enter to calculate (nice UX feature)
-                entry.bind('<Return>', lambda e: self.calculate())
-            
-            # Focus on first entry field
             entry_list[0].focus()
-        
-        # Clear result
-        self.result_display.config(
-            text="Enter values and click Calculate",
-            bg="#E8F5E9",
-            fg=self.success_color,
-            wraplength=self.scale(350)
-        )
-    
-    def calculate(self):
-        """Perform the calculation"""
-        # Use stored formula instead of relying on listbox selection
-        # This prevents issues when focus changes
+
+        self._result_container = tk.Frame(inner, bg=BG_CHAT)
+        self._result_container.pack(fill=tk.X, padx=self.s(16), pady=(self.s(4), self.s(16)))
+
+        tk.Frame(self._active, bg=BORDER, height=1).pack(fill=tk.X)
+        bot = tk.Frame(self._active, bg=WHITE, height=self.s(62))
+        bot.pack(fill=tk.X)
+        bot.pack_propagate(False)
+        hint = tk.Frame(bot, bg="#F0F2F5", highlightthickness=1, highlightbackground=BORDER)
+        hint.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=self.s(14), pady=self.s(13))
+        tk.Label(hint, text=f"Enter values for \u201c{name}\u201d then press Calculate",
+                 font=("Segoe UI", self.sf(8)), bg="#F0F2F5", fg=TX_LIGHT,
+                 padx=self.s(8), pady=self.s(6)).pack(side=tk.LEFT)
+        tk.Button(bot, text="Clear", font=("Segoe UI", self.sf(9)),
+                  bg=WHITE, fg=TX_SECONDARY, relief=tk.FLAT, bd=0, cursor="hand2",
+                  padx=self.s(10), pady=self.s(7), command=self._clear,
+                  activebackground=SEL_BG, activeforeground=BLUE).pack(
+                      side=tk.RIGHT, padx=(0, self.s(4)), pady=self.s(13))
+        tk.Button(bot, text="Calculate  \u2192", font=("Segoe UI", self.sf(9), "bold"),
+                  bg=BLUE, fg=TX_WHITE, relief=tk.FLAT, bd=0, cursor="hand2",
+                  padx=self.s(14), pady=self.s(8), command=self._calculate,
+                  activebackground=BLUE_DARK, activeforeground=TX_WHITE).pack(
+                      side=tk.RIGHT, padx=self.s(8), pady=self.s(13))
+
+    def _add_recv_bubble(self, parent, text, label=""):
+        row = tk.Frame(parent, bg=BG_CHAT)
+        row.pack(fill=tk.X, padx=self.s(16), pady=(self.s(12), self.s(4)), anchor=tk.W)
+        if label:
+            tk.Label(row, text=label, font=("Segoe UI", self.sf(7)),
+                     bg=BG_CHAT, fg=TX_LIGHT).pack(anchor=tk.W)
+        bub = tk.Frame(row, bg=WHITE, highlightthickness=1, highlightbackground=BORDER)
+        bub.pack(anchor=tk.W, ipadx=self.s(10), ipady=self.s(6))
+        tk.Label(bub, text=text, font=("Segoe UI", self.sf(9)), bg=WHITE, fg=TX_PRIMARY,
+                 wraplength=self.s(440), justify=tk.LEFT).pack()
+
+    def _add_input_bubble(self, parent, param_name, unit):
+        row = tk.Frame(parent, bg=BG_CHAT)
+        row.pack(fill=tk.X, padx=self.s(16), pady=self.s(5), anchor=tk.W)
+        row.bind("<MouseWheel>", lambda e: self._body_canvas.yview_scroll(
+            int(-1*(e.delta/120)), "units"))
+        tk.Label(row, text=f"{param_name}  ({unit})", font=("Segoe UI", self.sf(7)),
+                 bg=BG_CHAT, fg=TX_LIGHT).pack(anchor=tk.W)
+        bub = tk.Frame(row, bg=WHITE, highlightthickness=1, highlightbackground=BORDER)
+        bub.pack(anchor=tk.W, ipadx=self.s(6), ipady=self.s(2))
+        e = tk.Entry(bub, font=("Segoe UI", self.sf(10)), bg=WHITE, fg=TX_PRIMARY,
+                     relief=tk.FLAT, bd=0, width=int(26 * max(1.0, self.dpi**0.5)),
+                     insertbackground=TX_PRIMARY)
+        e.pack(padx=self.s(10), pady=self.s(6))
+        e.bind("<FocusIn>",  lambda ev, b=bub: b.config(highlightbackground=BLUE, highlightthickness=2))
+        e.bind("<FocusOut>", lambda ev, b=bub: b.config(highlightbackground=BORDER, highlightthickness=1))
+        e.bind("<MouseWheel>", lambda ev: self._body_canvas.yview_scroll(
+            int(-1*(ev.delta/120)), "units"))
+        return e
+
+    def _calculate(self):
         if not self.current_formula:
-            messagebox.showwarning("Warning", "Please select a formula first")
             return
-        
-        formula_name = self.current_formula
-        formula_data = FORMULAS[formula_name]
-        
-        # Collect input values
+        name = self.current_formula
         values = {}
         try:
-            for param_name, entry in self.input_fields.items():
-                value_text = entry.get().strip()
-                if not value_text:
-                    messagebox.showerror("Error", f"Please enter {param_name}")
+            for pname, entry in self.input_fields.items():
+                v = entry.get().strip()
+                if not v:
+                    messagebox.showerror("Missing input",
+                                         f"Please enter a value for \u2018{pname}\u2019")
                     return
-                values[param_name] = float(value_text)
+                values[pname] = float(v)
         except ValueError:
-            messagebox.showerror("Error", "All inputs must be valid numbers")
+            messagebox.showerror("Invalid input", "All values must be valid numbers")
             return
-        
-        # Perform calculation
         try:
-            result = calculate_formula(formula_name, values)
-            output_unit = formula_data.get('output_unit', '')
-            result_text = f"Result: {result:.6g} {output_unit}".strip()
-            
-            self.result_display.config(
-                text=result_text,
-                bg="#E8F5E9",
-                fg=self.success_color
-            )
-        except Exception as e:
-            messagebox.showerror("Calculation Error", str(e))
-            self.result_display.config(
-                text=f"Error: {str(e)}",
-                bg="#FFEBEE",
-                fg="#C62828"
-            )
-    
-    def clear_inputs(self):
-        """Clear all input fields"""
-        for entry in self.input_fields.values():
-            entry.delete(0, tk.END)
-        self.result_display.config(
-            text="Enter values and click Calculate",
-            bg="#E8F5E9",
-            fg=self.success_color
-        )
-    
-    def show_help(self):
-        """Show help window with DPI-aware scaling"""
-        help_window = tk.Toplevel(self.root)
-        help_window.title("Help & Tutorial")
-        
-        # Dynamic help window size based on screen
-        help_width = self.scale(600)
-        help_height = self.scale(500)
-        help_window.geometry(f"{help_width}x{help_height}")
-        
-        help_text = """
-FORMULA CALCULATOR - USER GUIDE
+            result = calculate_formula(name, values)
+        except Exception as ex:
+            messagebox.showerror("Calculation Error", str(ex))
+            return
+        unit = FORMULAS[name].get("output_unit", "")
+        display = f"{result:.6g}"
+        if unit:
+            display += f"  {unit}"
+        for w in self._result_container.winfo_children():
+            w.destroy()
+        tk.Label(self._result_container, text="Result", font=("Segoe UI", self.sf(7)),
+                 bg=BG_CHAT, fg=TX_LIGHT).pack(anchor=tk.E)
+        bub = tk.Frame(self._result_container, bg=BLUE)
+        bub.pack(anchor=tk.E, ipadx=self.s(16), ipady=self.s(10))
+        tk.Label(bub, text=display, font=("Segoe UI", self.sf(14), "bold"),
+                 bg=BLUE, fg=TX_WHITE).pack(padx=self.s(4))
+        self._body_canvas.update_idletasks()
+        self._body_canvas.yview_moveto(1.0)
 
-How to Use:
-1. Select a formula from the list on the left
-2. Read the formula description to understand what it calculates
-3. Enter the required values in the input fields
-4. Click "Calculate" to see the result
-
-Available Formulas:
-• Quadratic Equation: Solves ax² + bx + c = 0 for x
-• Pythagorean Theorem: Calculates c = √(a² + b²)
-• Circle Area: Calculates the area of a circle (πr²)
-• Rectangle Area: Calculates the area of a rectangle (l × w)
-• Triangle Area: Calculates the area using Heron's formula
-• Distance Formula: Calculates distance between two points
-• Simple Interest: Calculates I = (P × R × T) / 100
-• Compound Interest: Calculates A = P(1 + r/n)^(nt)
-• Celsius to Fahrenheit: Temperature conversion
-• Body Mass Index (BMI): Health metric calculation
-• Kinetic Energy: Calculates KE = ½mv²
-• Ohm's Law: Calculates V = I × R
-
-Tips:
-• Use decimal points for decimal numbers (e.g., 3.5 not 3,5)
-• Negative numbers are supported
-• Results are displayed with up to 6 significant figures
-• Click "Clear" to reset input fields and start over
-
-For more information, refer to the README.md file.
-        """
-        
-        text_widget = scrolledtext.ScrolledText(
-            help_window,
-            font=("Courier", self.scale_font(10)),
-            wrap=tk.WORD,
-            bg="white"
-        )
-        text_widget.pack(fill=tk.BOTH, expand=True, padx=self.scale(10), pady=self.scale(10))
-        text_widget.insert(tk.END, help_text)
-        text_widget.config(state=tk.DISABLED)
+    def _clear(self):
+        for e in self.input_fields.values():
+            e.delete(0, tk.END)
+        if self._result_container:
+            for w in self._result_container.winfo_children():
+                w.destroy()
+        if self.input_fields:
+            next(iter(self.input_fields.values())).focus()
 
 
 def main():
     root = tk.Tk()
-    app = FormulaCalculatorApp(root)
+    FormulaCalculatorApp(root)
     root.mainloop()
 
 
