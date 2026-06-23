@@ -1,0 +1,515 @@
+/* ── Reset ───────────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+/* ── Tokens ──────────────────────────────────────────────────────────────── */
+:root {
+  --bg:        #f1f5f9;
+  --surface:   #ffffff;
+  --border:    #e2e8f0;
+  --border-2:  #cbd5e1;
+  --text-1:    #0f172a;
+  --text-2:    #475569;
+  --text-3:    #94a3b8;
+  --accent:    #6366f1;
+  --accent-d:  #4f46e5;
+  --accent-l:  #eef2ff;
+  --green:     #059669;
+  --green-l:   #ecfdf5;
+  --green-b:   #a7f3d0;
+  --red:       #dc2626;
+  --red-l:     #fef2f2;
+  --red-b:     #fca5a5;
+  --r:         10px;
+  --r-sm:      7px;
+  --shadow-sm: 0 1px 2px rgba(0,0,0,.06), 0 1px 3px rgba(0,0,0,.08);
+}
+
+/* ── Base ────────────────────────────────────────────────────────────────── */
+html, body { height: 100%; }
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text-1);
+  height: 100vh;
+  overflow: hidden;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── App shell ───────────────────────────────────────────────────────────── */
+.app {
+  display: flex;
+  height: 100vh;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── *
+ * SIDEBAR
+ * ─────────────────────────────────────────────────────────────────────────── */
+.sidebar {
+  width: 268px;
+  min-width: 268px;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Header */
+.sidebar-header {
+  padding: 18px 14px 0;
+  flex-shrink: 0;
+}
+
+.logo-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.logo-icon {
+  width: 30px;
+  height: 30px;
+  background: var(--accent);
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  flex-shrink: 0;
+  letter-spacing: -0.5px;
+}
+
+.sidebar-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -0.2px;
+}
+
+/* Search */
+.search-wrap {
+  position: relative;
+  margin-bottom: 10px;
+}
+
+.search-icon {
+  position: absolute;
+  left: 9px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 14px;
+  height: 14px;
+  color: var(--text-3);
+  pointer-events: none;
+}
+
+.search-input {
+  width: 100%;
+  padding: 7px 10px 7px 30px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--bg);
+  color: var(--text-1);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.search-input:focus {
+  border-color: var(--accent);
+  background: #fff;
+}
+
+.search-input::placeholder { color: var(--text-3); }
+
+/* Formula list */
+.formula-list {
+  flex: 1;
+  overflow-y: auto;
+  padding: 4px 0 16px;
+}
+
+.formula-list::-webkit-scrollbar { width: 4px; }
+.formula-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.cat-label {
+  padding: 12px 14px 3px;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+}
+
+.formula-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 14px;
+  cursor: pointer;
+  transition: background 0.1s;
+  user-select: none;
+}
+
+.formula-item:hover  { background: var(--bg); }
+.formula-item.active { background: var(--accent-l); }
+
+.item-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 13px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.item-name {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.formula-item.active .item-name {
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.item-eq {
+  font-size: 11px;
+  color: var(--text-3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+}
+
+.no-results {
+  padding: 24px 14px;
+  text-align: center;
+  color: var(--text-3);
+  font-size: 13px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── *
+ * CONTENT
+ * ─────────────────────────────────────────────────────────────────────────── */
+.content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Empty state */
+.empty-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 48px;
+}
+
+.empty-icon {
+  width: 64px;
+  height: 64px;
+  background: var(--accent-l);
+  border-radius: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+  color: var(--accent);
+  margin-bottom: 4px;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -0.3px;
+}
+
+.empty-sub {
+  font-size: 14px;
+  color: var(--text-3);
+  text-align: center;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────── *
+ * FORMULA VIEW
+ * ─────────────────────────────────────────────────────────────────────────── */
+.formula-view {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* ── Header ── */
+.fv-header {
+  padding: 26px 36px 20px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+.fvh-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 10px;
+}
+
+.fvh-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.fvh-name {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -0.4px;
+  margin-bottom: 4px;
+}
+
+.cat-badge {
+  display: inline-block;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.fvh-desc {
+  font-size: 13px;
+  color: var(--text-2);
+  line-height: 1.65;
+  margin-bottom: 10px;
+  max-width: 640px;
+}
+
+.fvh-eq {
+  display: inline-block;
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 13px;
+  color: var(--accent);
+  background: var(--accent-l);
+  padding: 4px 12px;
+  border-radius: 6px;
+}
+
+/* ── Body ── */
+.fv-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 28px 36px 40px;
+}
+
+.fv-body::-webkit-scrollbar { width: 4px; }
+.fv-body::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
+}
+
+.inputs-section { max-width: 460px; }
+
+.inputs-title {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  margin-bottom: 14px;
+}
+
+.input-row { margin-bottom: 14px; }
+
+.input-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 5px;
+}
+
+.input-label-text {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-1);
+}
+
+.input-unit {
+  font-size: 11px;
+  color: var(--text-3);
+  background: var(--bg);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.input-field {
+  width: 100%;
+  padding: 9px 13px;
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  background: var(--surface);
+  font-size: 14px;
+  color: var(--text-1);
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+  -moz-appearance: textfield;
+}
+
+.input-field::-webkit-inner-spin-button,
+.input-field::-webkit-outer-spin-button { -webkit-appearance: none; }
+
+.input-field:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(99,102,241,.10);
+}
+
+.input-field.input-error {
+  border-color: var(--red);
+  box-shadow: 0 0 0 3px rgba(220,38,38,.09);
+}
+
+.input-field::placeholder { color: var(--text-3); }
+
+/* ── Actions ── */
+.action-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.btn-calculate {
+  padding: 10px 24px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  letter-spacing: 0.01em;
+  transition: background 0.15s, transform 0.1s;
+}
+
+.btn-calculate:hover  { background: var(--accent-d); }
+.btn-calculate:active { transform: scale(0.97); }
+
+.btn-clear {
+  padding: 10px 18px;
+  background: var(--surface);
+  color: var(--text-2);
+  border: 1.5px solid var(--border);
+  border-radius: var(--r-sm);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+}
+
+.btn-clear:hover {
+  background: var(--bg);
+  border-color: var(--border-2);
+}
+
+/* ── Result card ── */
+.result-card {
+  margin-top: 22px;
+  padding: 18px 22px;
+  background: var(--surface);
+  border-radius: var(--r);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-sm);
+  max-width: 460px;
+}
+
+.result-card.success {
+  border-color: var(--green-b);
+  background: var(--green-l);
+}
+
+.result-card.error {
+  border-color: var(--red-b);
+  background: var(--red-l);
+}
+
+.result-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  margin-bottom: 6px;
+}
+
+.result-card.success .result-label { color: var(--green); }
+.result-card.error   .result-label { color: var(--red); }
+
+.result-value-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.result-value {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--text-1);
+  letter-spacing: -1px;
+  line-height: 1;
+}
+
+.result-unit {
+  font-size: 16px;
+  color: var(--text-2);
+  font-weight: 400;
+}
+
+.result-error-msg {
+  font-size: 14px;
+  color: var(--red);
+  line-height: 1.5;
+}
+
+/* ── Spinner ── */
+.spinner {
+  width: 20px;
+  height: 20px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
