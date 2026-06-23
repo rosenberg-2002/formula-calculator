@@ -2,13 +2,24 @@
 
 A Python desktop app with 16 built-in formulas across algebra, geometry, physics, finance, and more.
 
-**Formulas:** Quadratic Equation, Circle/Rectangle/Triangle/Sphere Area, Pythagorean Theorem, Distance Formula, Kinetic Energy, Ohm's Law, Electrical Power, Simple & Compound Interest, Celsius ↔ Fahrenheit, BMI, Percentage
-
-## Installation & Setup
-
-### Requirements
-- Python 3.6 or higher
-- tkinter (usually included with Python)
+| Category | Formula | Equation |
+|---|---|---|
+| Algebra | Quadratic Equation | `x = (-b ± √(b²-4ac)) / 2a` |
+| Geometry | Circle Area | `A = πr²` |
+| Geometry | Rectangle Area | `A = l × w` |
+| Geometry | Triangle Area (Heron's) | `A = √(s(s-a)(s-b)(s-c))` |
+| Geometry | Pythagorean Theorem | `c = √(a² + b²)` |
+| Geometry | Sphere Volume | `V = (4/3)πr³` |
+| Coordinate | Distance Formula | `d = √((x₂-x₁)² + (y₂-y₁)²)` |
+| Physics | Kinetic Energy | `KE = ½mv²` |
+| Physics | Ohm's Law | `V = I × R` |
+| Physics | Electrical Power | `P = V × I` |
+| Finance | Simple Interest | `I = (P × R × T) / 100` |
+| Finance | Compound Interest | `A = P(1 + r/n)^(nt)` |
+| Temperature | Celsius → Fahrenheit | `F = (C × 9/5) + 32` |
+| Temperature | Fahrenheit → Celsius | `C = (F - 32) × 5/9` |
+| Health | BMI | `BMI = weight / height²` |
+| General | Percentage | `P = (Value / Total) × 100` |
 
 ## Requirements
 
