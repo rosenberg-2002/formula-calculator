@@ -7,279 +7,512 @@
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <div class="app">
+<div class="app">
 
-    <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
-    <aside class="sidebar">
-      <div class="sidebar-header">
-        <div class="logo-row">
-          <div class="logo-icon">∑</div>
-          <span class="sidebar-title">Formulas</span>
+  <!-- ── Sidebar ──────────────────────────────────────────────────────────── -->
+  <aside class="sidebar">
+    <div class="sidebar-header">
+      <div class="logo-row">
+        <div class="logo-icon">&#x2211;</div>
+        <span class="sidebar-title">Formulas</span>
+      </div>
+      <div class="search-wrap">
+        <svg class="search-icon" viewBox="0 0 20 20" fill="none">
+          <path d="M17.5 17.5 13.875 13.875M15.833 9.167a6.667 6.667 0 1 1-13.333 0 6.667 6.667 0 0 1 13.333 0Z"
+                stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+        <input type="text" id="searchInput" class="search-input"
+               placeholder="Search formulas&#x2026;" autocomplete="off" />
+      </div>
+    </div>
+    <nav id="formulaList" class="formula-list"></nav>
+  </aside>
+
+  <!-- ── Main content ─────────────────────────────────────────────────────── -->
+  <main class="content">
+
+    <!-- Empty state (visible by default) -->
+    <div id="emptyState" class="empty-state">
+      <div class="es-inner">
+        <div class="es-hero">
+          <div class="es-icon">&#x2211;</div>
+          <div>
+            <h2 class="es-title">Formula Calculator</h2>
+            <p class="es-sub">Select a formula from the sidebar to begin</p>
+          </div>
         </div>
-        <div class="search-wrap">
-          <svg class="search-icon" viewBox="0 0 20 20" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <path d="M17.5 17.5 13.875 13.875M15.833 9.167a6.667 6.667 0 1 1-13.333 0 6.667 6.667 0 0 1 13.333 0Z"
-                  stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-          </svg>
-          <input type="text" id="searchInput" class="search-input"
-                 placeholder="Search formulas…" autocomplete="off" />
+        <div class="es-demo-card">
+          <div class="es-demo-header">
+            <span class="es-demo-badge">LIVE DEMO</span>
+            <span class="es-demo-name" id="demoName"></span>
+          </div>
+          <div class="es-demo-steps" id="demoSteps"></div>
         </div>
       </div>
-      <nav id="formulaList" class="formula-list"></nav>
-    </aside>
+    </div>
 
-    <!-- ── Main content ─────────────────────────────────────────────────── -->
-    <main class="content">
+    <!-- Formula view (hidden by default via CSS class) -->
+    <div id="formulaView" class="formula-view">
+      <div class="fv-header" id="fvHeader"></div>
+      <div class="fv-body"   id="fvBody"></div>
+    </div>
 
-      <!-- Empty state -->
-      <div id="emptyState" class="empty-state">
-        <div class="empty-icon">∑</div>
-        <p class="empty-title">Formula Calculator</p>
-        <p class="empty-sub">Choose a formula from the sidebar to begin</p>
-      </div>
+  </main>
+</div>
 
-      <!-- Formula view (hidden until selection) -->
-      <div id="formulaView" class="formula-view" hidden>
-        <div class="fv-header" id="fvHeader"></div>
-        <div class="fv-body" id="fvBody"></div>
-      </div>
+<script>
+// ── Category metadata ────────────────────────────────────────────────────────
+const CAT_META = {
+  Algebra:     { color: "#7c3aed", bg: "#f5f3ff", icon: "x\xB2" },
+  Math:        { color: "#d97706", bg: "#fffbeb", icon: "%"      },
+  Geometry:    { color: "#2563eb", bg: "#eff6ff", icon: "\u25B3"  },
+  Physics:     { color: "#0891b2", bg: "#ecfeff", icon: "\u26A1" },
+  Finance:     { color: "#059669", bg: "#ecfdf5", icon: "$"      },
+  Temperature: { color: "#ea580c", bg: "#fff7ed", icon: "\xB0"   },
+  Health:      { color: "#db2777", bg: "#fdf2f8", icon: "\u2665"  },
+  Other:       { color: "#475569", bg: "#f1f5f9", icon: "\u2022"  },
+};
+const CAT_ORDER = ["Algebra","Math","Geometry","Physics","Finance","Temperature","Health","Other"];
 
-    </main>
-  </div>
+const EQUATIONS = {
+  "Quadratic Equation":              "x = (\u2212b \xB1 \u221A(b\xB2\u22124ac)) / 2a",
+  "Pythagorean Theorem":             "c = \u221A(a\xB2 + b\xB2)",
+  "Circle Area":                     "A = \u03C0r\xB2",
+  "Rectangle Area":                  "A = l \xD7 w",
+  "Triangle Area (Heron's Formula)": "A = \u221A(s(s\u2212a)(s\u2212b)(s\u2212c))",
+  "Distance Formula":                "d = \u221A((x\u2082\u2212x\u2081)\xB2 + (y\u2082\u2212y\u2081)\xB2)",
+  "Simple Interest":                 "I = P \xD7 R \xD7 T / 100",
+  "Compound Interest":               "A = P(1 + r/n)^(nt)",
+  "Celsius to Fahrenheit":           "F = (C \xD7 9/5) + 32",
+  "Fahrenheit to Celsius":           "C = (F \u2212 32) \xD7 5/9",
+  "Body Mass Index (BMI)":           "BMI = w / h\xB2",
+  "Kinetic Energy":                  "KE = \xBDmv\xB2",
+  "Ohm's Law":                       "V = I \xD7 R",
+  "Power (Electrical)":              "P = V \xD7 I",
+  "Percentage":                      "P = (value / total) \xD7 100",
+  "Sphere Volume":                   "V = (4/3)\u03C0r\xB3",
+};
 
-  <script>
-  // ── Category metadata ──────────────────────────────────────────────────────
-  const CAT_META = {
-    Algebra:     { color: "#7c3aed", bg: "#f5f3ff", icon: "x²" },
-    Math:        { color: "#d97706", bg: "#fffbeb", icon: "%"  },
-    Geometry:    { color: "#2563eb", bg: "#eff6ff", icon: "△"  },
-    Physics:     { color: "#0891b2", bg: "#ecfeff", icon: "⚡" },
-    Finance:     { color: "#059669", bg: "#ecfdf5", icon: "$"  },
-    Temperature: { color: "#ea580c", bg: "#fff7ed", icon: "°"  },
-    Health:      { color: "#db2777", bg: "#fdf2f8", icon: "♡"  },
-    Other:       { color: "#475569", bg: "#f1f5f9", icon: "•"  },
-  };
+// ── Cycling demo for empty state ─────────────────────────────────────────────
+const DEMOS = [
+  { name: "Kinetic Energy", steps: [
+    "KE = \xBD \xD7 m \xD7 v\xB2",
+    "KE = \xBD \xD7 5 \xD7 10\xB2",
+    "KE = \xBD \xD7 5 \xD7 100",
+    "KE = \xBD \xD7 500",
+    "KE = 250 J  \u2713",
+  ]},
+  { name: "Circle Area", steps: [
+    "A = \u03C0 \xD7 r\xB2",
+    "A = \u03C0 \xD7 7\xB2",
+    "A = \u03C0 \xD7 49",
+    "A \u2248 153.938 sq units  \u2713",
+  ]},
+  { name: "Pythagorean Theorem", steps: [
+    "c = \u221A(a\xB2 + b\xB2)",
+    "c = \u221A(3\xB2 + 4\xB2)",
+    "c = \u221A(9 + 16)",
+    "c = \u221A25",
+    "c = 5 units  \u2713",
+  ]},
+  { name: "Ohm's Law", steps: [
+    "V = I \xD7 R",
+    "V = 2 \xD7 15",
+    "V = 30 V  \u2713",
+  ]},
+];
 
-  const CAT_ORDER = ["Algebra","Math","Geometry","Physics","Finance","Temperature","Health","Other"];
+let demoIdx = 0, demoTimer = null;
 
-  const EQUATIONS = {
-    "Quadratic Equation":              "x = (−b ± √(b²−4ac)) / 2a",
-    "Pythagorean Theorem":             "c = √(a² + b²)",
-    "Circle Area":                     "A = πr²",
-    "Rectangle Area":                  "A = l × w",
-    "Triangle Area (Heron's Formula)": "A = √(s(s−a)(s−b)(s−c))",
-    "Distance Formula":                "d = √((x₂−x₁)² + (y₂−y₁)²)",
-    "Simple Interest":                 "I = P × R × T / 100",
-    "Compound Interest":               "A = P(1 + r/n)^(nt)",
-    "Celsius to Fahrenheit":           "F = (C × 9/5) + 32",
-    "Fahrenheit to Celsius":           "C = (F − 32) × 5/9",
-    "Body Mass Index (BMI)":           "BMI = w / h²",
-    "Kinetic Energy":                  "KE = ½mv²",
-    "Ohm's Law":                       "V = I × R",
-    "Power (Electrical)":              "P = V × I",
-    "Percentage":                      "P = (value / total) × 100",
-    "Sphere Volume":                   "V = (4/3)πr³",
-  };
-
-  // ── State ──────────────────────────────────────────────────────────────────
-  let formulas      = {};
-  let activeFormula = null;
-
-  // ── DOM refs ───────────────────────────────────────────────────────────────
-  const listEl      = document.getElementById("formulaList");
-  const searchInput = document.getElementById("searchInput");
-  const emptyState  = document.getElementById("emptyState");
-  const formulaView = document.getElementById("formulaView");
-  const fvHeader    = document.getElementById("fvHeader");
-  const fvBody      = document.getElementById("fvBody");
-
-  // ── Bootstrap ──────────────────────────────────────────────────────────────
-  async function init() {
-    const res = await fetch("/api/formulas");
-    formulas  = await res.json();
-    buildList("");
+function runDemo() {
+  const demo = DEMOS[demoIdx % DEMOS.length];
+  document.getElementById("demoName").textContent = demo.name;
+  const stepsEl = document.getElementById("demoSteps");
+  stepsEl.innerHTML = "";
+  let i = 0;
+  function tick() {
+    if (i >= demo.steps.length) {
+      demoTimer = setTimeout(() => { demoIdx++; runDemo(); }, 2200);
+      return;
+    }
+    const row = document.createElement("div");
+    const isFinal = i === demo.steps.length - 1;
+    row.className = "demo-step" + (isFinal ? " demo-step-final" : "");
+    row.textContent = demo.steps[i];
+    stepsEl.appendChild(row);
+    i++;
+    demoTimer = setTimeout(tick, isFinal ? 400 : 360);
   }
+  tick();
+}
 
-  // ── Sidebar list ───────────────────────────────────────────────────────────
-  function buildList(query) {
-    listEl.innerHTML = "";
-    const q = query.toLowerCase().trim();
+// ── App state ────────────────────────────────────────────────────────────────
+let formulas      = {};
+let activeFormula = null;
 
-    const groups = {};
-    for (const [name, info] of Object.entries(formulas)) {
-      if (q && !name.toLowerCase().includes(q)) continue;
-      const cat = info.category || "Other";
-      (groups[cat] = groups[cat] || []).push(name);
-    }
+const listEl      = document.getElementById("formulaList");
+const searchInput = document.getElementById("searchInput");
+const emptyState  = document.getElementById("emptyState");
+const formulaView = document.getElementById("formulaView");
+const fvHeader    = document.getElementById("fvHeader");
+const fvBody      = document.getElementById("fvBody");
 
-    let count = 0;
-    for (const cat of CAT_ORDER) {
-      const items = groups[cat];
-      if (!items || !items.length) continue;
-      const meta = CAT_META[cat] || CAT_META.Other;
+// ── Init ─────────────────────────────────────────────────────────────────────
+async function init() {
+  const res = await fetch("/api/formulas");
+  formulas  = await res.json();
+  buildList("");
+  runDemo();
+}
 
-      const label = document.createElement("div");
-      label.className = "cat-label";
-      label.textContent = cat;
-      listEl.appendChild(label);
-
-      for (const name of items) {
-        const item = document.createElement("div");
-        item.className = "formula-item" + (name === activeFormula ? " active" : "");
-        item.dataset.name = name;
-        item.innerHTML = `
-          <div class="item-icon" style="background:${meta.bg};color:${meta.color}">${meta.icon}</div>
-          <div class="item-info">
-            <div class="item-name">${name}</div>
-            <div class="item-eq">${EQUATIONS[name] || ""}</div>
-          </div>`;
-        item.addEventListener("click", () => selectFormula(name));
-        listEl.appendChild(item);
-        count++;
-      }
-    }
-
-    if (count === 0) {
-      listEl.innerHTML = `<p class="no-results">No results for "${query}"</p>`;
-    }
+// ── Sidebar ──────────────────────────────────────────────────────────────────
+function buildList(query) {
+  listEl.innerHTML = "";
+  const q = query.toLowerCase().trim();
+  const groups = {};
+  for (const [name, info] of Object.entries(formulas)) {
+    if (q && !name.toLowerCase().includes(q)) continue;
+    const cat = info.category || "Other";
+    (groups[cat] = groups[cat] || []).push(name);
   }
-
-  searchInput.addEventListener("input", () => buildList(searchInput.value));
-
-  // ── Formula view ───────────────────────────────────────────────────────────
-  function selectFormula(name) {
-    activeFormula = name;
-    buildList(searchInput.value);
-
-    const info = formulas[name];
-    const cat  = info.category || "Other";
+  let count = 0;
+  for (const cat of CAT_ORDER) {
+    const items = groups[cat];
+    if (!items || !items.length) continue;
     const meta = CAT_META[cat] || CAT_META.Other;
-    const eq   = EQUATIONS[name] || "";
-
-    // Header
-    fvHeader.innerHTML = `
-      <div class="fvh-top">
-        <div class="fvh-icon" style="background:${meta.bg};color:${meta.color}">${meta.icon}</div>
-        <div class="fvh-text">
-          <h2 class="fvh-name">${name}</h2>
-          <span class="cat-badge" style="background:${meta.bg};color:${meta.color}">${cat}</span>
-        </div>
-      </div>
-      <p class="fvh-desc">${info.description}</p>
-      ${eq ? `<code class="fvh-eq">${eq}</code>` : ""}`;
-
-    // Inputs
-    const inputsHTML = info.parameters.map(p => `
-      <div class="input-row">
-        <label class="input-label">
-          <span class="input-label-text">${fmt(p.name)}</span>
-          ${p.unit ? `<span class="input-unit">${p.unit}</span>` : ""}
-        </label>
-        <input type="number" class="input-field" data-param="${p.name}"
-               placeholder="Enter value" step="any" />
-      </div>`).join("");
-
-    fvBody.innerHTML = `
-      <div class="inputs-section">
-        <p class="inputs-title">Inputs</p>
-        ${inputsHTML}
-        <div class="action-row">
-          <button class="btn-calculate" id="btnCalc">Calculate</button>
-          <button class="btn-clear"     id="btnClear">Clear</button>
-        </div>
-        <div id="resultCard" class="result-card" hidden></div>
-      </div>`;
-
-    document.getElementById("btnCalc").addEventListener("click", calculate);
-    document.getElementById("btnClear").addEventListener("click", clearForm);
-
-    emptyState.hidden  = true;
-    formulaView.hidden = false;
-
-    const first = fvBody.querySelector(".input-field");
-    if (first) first.focus();
-  }
-
-  function fmt(name) {
-    return name.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
-  }
-
-  // ── Calculate ──────────────────────────────────────────────────────────────
-  async function calculate() {
-    if (!activeFormula) return;
-
-    const inputs = fvBody.querySelectorAll(".input-field");
-    const values = {};
-    let firstEmpty = null;
-
-    for (const inp of inputs) {
-      inp.classList.remove("input-error");
-      if (inp.value.trim() === "") {
-        inp.classList.add("input-error");
-        if (!firstEmpty) firstEmpty = inp;
-      } else {
-        values[inp.dataset.param] = inp.value.trim();
-      }
-    }
-
-    if (firstEmpty) { firstEmpty.focus(); return; }
-
-    const card = document.getElementById("resultCard");
-    card.hidden    = false;
-    card.className = "result-card";
-    card.innerHTML = `<div class="spinner"></div>`;
-
-    try {
-      const res  = await fetch("/api/calculate", {
-        method:  "POST",
-        headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ formula: activeFormula, values }),
-      });
-      const data = await res.json();
-
-      if (data.error) {
-        card.className = "result-card error";
-        card.innerHTML = `
-          <p class="result-label">Error</p>
-          <p class="result-error-msg">${data.error}</p>`;
-      } else {
-        card.className = "result-card success";
-        card.innerHTML = `
-          <p class="result-label">Result</p>
-          <div class="result-value-row">
-            <span class="result-value">${fmtNum(data.result)}</span>
-            ${data.unit ? `<span class="result-unit">${data.unit}</span>` : ""}
-          </div>`;
-      }
-    } catch {
-      card.className = "result-card error";
-      card.innerHTML = `<p class="result-label">Error</p><p class="result-error-msg">Could not reach server.</p>`;
+    const label = document.createElement("div");
+    label.className = "cat-label";
+    label.textContent = cat;
+    listEl.appendChild(label);
+    for (const name of items) {
+      const item = document.createElement("div");
+      item.className = "formula-item" + (name === activeFormula ? " active" : "");
+      item.dataset.name = name;
+      item.innerHTML =
+        `<div class="item-icon" style="background:${meta.bg};color:${meta.color}">${meta.icon}</div>` +
+        `<div class="item-info">` +
+          `<div class="item-name">${name}</div>` +
+          `<div class="item-eq">${EQUATIONS[name] || ""}</div>` +
+        `</div>`;
+      item.addEventListener("click", () => selectFormula(name));
+      listEl.appendChild(item);
+      count++;
     }
   }
-
-  function fmtNum(val) {
-    if (Number.isInteger(val)) return val.toString();
-    // Up to 6 significant figures, strip trailing zeros
-    return parseFloat(val.toPrecision(6)).toString();
+  if (count === 0) {
+    listEl.innerHTML = `<p class="no-results">No results for "${query}"</p>`;
   }
+}
 
-  function clearForm() {
-    fvBody.querySelectorAll(".input-field").forEach(i => {
-      i.value = "";
-      i.classList.remove("input-error");
+searchInput.addEventListener("input", () => buildList(searchInput.value));
+
+// ── Formula view ─────────────────────────────────────────────────────────────
+function selectFormula(name) {
+  activeFormula = name;
+  buildList(searchInput.value);
+
+  // stop demo, switch panels
+  clearTimeout(demoTimer);
+  emptyState.classList.add("es-gone");
+  formulaView.classList.add("fv-active");
+
+  const info = formulas[name];
+  const cat  = info.category || "Other";
+  const meta = CAT_META[cat] || CAT_META.Other;
+  const eq   = EQUATIONS[name] || "";
+
+  fvHeader.innerHTML =
+    `<div class="fvh-top">` +
+      `<div class="fvh-icon" style="background:${meta.bg};color:${meta.color}">${meta.icon}</div>` +
+      `<div class="fvh-text">` +
+        `<h2 class="fvh-name">${name}</h2>` +
+        `<span class="cat-badge" style="background:${meta.bg};color:${meta.color}">${cat}</span>` +
+      `</div>` +
+    `</div>` +
+    `<p class="fvh-desc">${info.description}</p>` +
+    (eq ? `<code class="fvh-eq">${eq}</code>` : "");
+
+  const inputsHTML = info.parameters.map((p, idx) =>
+    `<div class="input-row" style="--ri:${idx}">` +
+      `<label class="input-label">` +
+        `<span class="input-label-text">${fmt(p.name)}</span>` +
+        (p.unit ? `<span class="input-unit">${p.unit}</span>` : "") +
+      `</label>` +
+      `<input type="number" class="input-field" data-param="${p.name}" placeholder="Enter value" step="any" />` +
+    `</div>`
+  ).join("");
+
+  fvBody.innerHTML =
+    `<div class="inputs-section">` +
+      `<p class="inputs-title">Inputs</p>` +
+      inputsHTML +
+      `<div class="action-row">` +
+        `<button class="btn-calculate" id="btnCalc">Calculate</button>` +
+        `<button class="btn-clear" id="btnClear">Clear</button>` +
+      `</div>` +
+      `<div id="resultCard" class="result-card result-hidden"></div>` +
+    `</div>`;
+
+  document.getElementById("btnCalc").addEventListener("click", calculate);
+  document.getElementById("btnClear").addEventListener("click", clearForm);
+
+  const first = fvBody.querySelector(".input-field");
+  if (first) first.focus();
+}
+
+function fmt(name) {
+  return name.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+}
+
+// ── Number formatter ─────────────────────────────────────────────────────────
+function n(val) {
+  if (val === undefined || val === null || (typeof val === "number" && isNaN(val))) return "?";
+  const v = Math.round(val * 1e10) / 1e10;
+  if (Number.isInteger(v)) return v.toString();
+  const abs = Math.abs(v);
+  if (abs !== 0 && (abs >= 1e7 || abs < 1e-4)) return parseFloat(v.toPrecision(4)).toExponential();
+  return parseFloat(v.toPrecision(6)).toString();
+}
+
+// ── Step generator ────────────────────────────────────────────────────────────
+function getSteps(name, vals, result) {
+  switch (name) {
+    case "Quadratic Equation": {
+      const a = +vals.a, b = +vals.b, c = +vals.c;
+      const disc = b*b - 4*a*c, sd = Math.sqrt(disc);
+      return [
+        { text: "x = (\u2212b + \u221A(b\xB2\u22124ac)) / 2a",                              note: "formula" },
+        { text: `x = (\u2212(${n(b)}) + \u221A(${n(b)}\xB2 \u2212 4\xD7${n(a)}\xD7${n(c)})) / (2\xD7${n(a)})`, note: "substitute" },
+        { text: `x = (${n(-b)} + \u221A(${n(b*b)} \u2212 ${n(4*a*c)})) / ${n(2*a)}`,        note: "evaluate" },
+        { text: `x = (${n(-b)} + \u221A${n(disc)}) / ${n(2*a)}`,                            note: "discriminant" },
+        { text: `x = (${n(-b)} + ${n(sd)}) / ${n(2*a)}`,                                    note: "\u221Adiscriminant" },
+        { text: `x = ${n(-b+sd)} / ${n(2*a)}`,                                              note: "numerator" },
+        { text: `x = ${n(result)}`,                                                          note: "result", final: true },
+      ];
+    }
+    case "Pythagorean Theorem": {
+      const a = +vals.a, b = +vals.b;
+      return [
+        { text: "c = \u221A(a\xB2 + b\xB2)",                        note: "formula" },
+        { text: `c = \u221A(${n(a)}\xB2 + ${n(b)}\xB2)`,            note: "substitute" },
+        { text: `c = \u221A(${n(a*a)} + ${n(b*b)})`,                note: "evaluate squares" },
+        { text: `c = \u221A${n(a*a + b*b)}`,                        note: "sum" },
+        { text: `c = ${n(result)} units`,                            note: "result", final: true },
+      ];
+    }
+    case "Circle Area": {
+      const r = +vals.radius;
+      return [
+        { text: "A = \u03C0 \xD7 r\xB2",              note: "formula" },
+        { text: `A = \u03C0 \xD7 ${n(r)}\xB2`,        note: "substitute" },
+        { text: `A = \u03C0 \xD7 ${n(r*r)}`,          note: "evaluate r\xB2" },
+        { text: `A = ${n(result)} sq units`,            note: "result", final: true },
+      ];
+    }
+    case "Rectangle Area": {
+      const l = +vals.length, w = +vals.width;
+      return [
+        { text: "A = l \xD7 w",                   note: "formula" },
+        { text: `A = ${n(l)} \xD7 ${n(w)}`,       note: "substitute" },
+        { text: `A = ${n(result)} sq units`,        note: "result", final: true },
+      ];
+    }
+    case "Triangle Area (Heron's Formula)": {
+      const a = +vals.side_a, b = +vals.side_b, c = +vals.side_c;
+      const s = (a+b+c)/2;
+      return [
+        { text: "s = (a + b + c) / 2",                                              note: "semi-perimeter" },
+        { text: `s = (${n(a)} + ${n(b)} + ${n(c)}) / 2 = ${n(s)}`,                 note: "calculate s" },
+        { text: "A = \u221A(s(s\u2212a)(s\u2212b)(s\u2212c))",                      note: "Heron's formula" },
+        { text: `A = \u221A(${n(s)} \xD7 ${n(s-a)} \xD7 ${n(s-b)} \xD7 ${n(s-c)})`, note: "substitute" },
+        { text: `A = ${n(result)} sq units`,                                         note: "result", final: true },
+      ];
+    }
+    case "Distance Formula": {
+      const x1=+vals.x1, y1=+vals.y1, x2=+vals.x2, y2=+vals.y2;
+      const dx=x2-x1, dy=y2-y1;
+      return [
+        { text: "d = \u221A((x\u2082\u2212x\u2081)\xB2 + (y\u2082\u2212y\u2081)\xB2)",        note: "formula" },
+        { text: `d = \u221A((${n(x2)}\u2212${n(x1)})\xB2 + (${n(y2)}\u2212${n(y1)})\xB2)`,    note: "substitute" },
+        { text: `d = \u221A(${n(dx)}\xB2 + ${n(dy)}\xB2)`,                                    note: "differences" },
+        { text: `d = \u221A(${n(dx*dx)} + ${n(dy*dy)})`,                                      note: "squares" },
+        { text: `d = \u221A${n(dx*dx+dy*dy)}`,                                                 note: "sum" },
+        { text: `d = ${n(result)} units`,                                                       note: "result", final: true },
+      ];
+    }
+    case "Simple Interest": {
+      const P=+vals.principal, R=+vals.rate, T=+vals.time;
+      return [
+        { text: "I = (P \xD7 R \xD7 T) / 100",                    note: "formula" },
+        { text: `I = (${n(P)} \xD7 ${n(R)} \xD7 ${n(T)}) / 100`, note: "substitute" },
+        { text: `I = ${n(P*R*T)} / 100`,                           note: "numerator" },
+        { text: `I = ${n(result)}`,                                 note: "result", final: true },
+      ];
+    }
+    case "Compound Interest": {
+      const P=+vals.principal, R=+vals.rate, T=+vals.time, N=+vals.compounds_per_year;
+      const r=R/100, factor=Math.pow(1+r/N, N*T), total=P*factor;
+      return [
+        { text: "Interest = P(1 + r/n)^(nt) \u2212 P",                                     note: "formula" },
+        { text: `r = ${n(R)}% \xF7 100 = ${n(r)}`,                                         note: "convert rate" },
+        { text: `= ${n(P)} \xD7 (1 + ${n(r)}/${n(N)})^(${n(N)}\xD7${n(T)}) \u2212 ${n(P)}`, note: "substitute" },
+        { text: `= ${n(P)} \xD7 (${n(1+r/N)})^${n(N*T)} \u2212 ${n(P)}`,                  note: "simplify base" },
+        { text: `= ${n(P)} \xD7 ${n(factor)} \u2212 ${n(P)}`,                              note: "evaluate power" },
+        { text: `= ${n(total)} \u2212 ${n(P)}`,                                             note: "multiply" },
+        { text: `= ${n(result)}`,                                                            note: "result", final: true },
+      ];
+    }
+    case "Celsius to Fahrenheit": {
+      const C=+vals.celsius;
+      return [
+        { text: "F = (C \xD7 9/5) + 32",              note: "formula" },
+        { text: `F = (${n(C)} \xD7 1.8) + 32`,        note: "substitute" },
+        { text: `F = ${n(C*1.8)} + 32`,               note: "multiply" },
+        { text: `F = ${n(result)} \xB0F`,              note: "result", final: true },
+      ];
+    }
+    case "Fahrenheit to Celsius": {
+      const F=+vals.fahrenheit;
+      return [
+        { text: "C = (F \u2212 32) \xD7 5/9",         note: "formula" },
+        { text: `C = (${n(F)} \u2212 32) \xD7 0.5\u0305\u0305\u0305`, note: "substitute" },
+        { text: `C = ${n(F-32)} \xD7 0.5556`,         note: "subtract 32" },
+        { text: `C = ${n(result)} \xB0C`,              note: "result", final: true },
+      ];
+    }
+    case "Body Mass Index (BMI)": {
+      const w=+vals.weight, h=+vals.height;
+      return [
+        { text: "BMI = weight / height\xB2",      note: "formula" },
+        { text: `BMI = ${n(w)} / ${n(h)}\xB2`,   note: "substitute" },
+        { text: `BMI = ${n(w)} / ${n(h*h)}`,     note: "evaluate h\xB2" },
+        { text: `BMI = ${n(result)} kg/m\xB2`,    note: "result", final: true },
+      ];
+    }
+    case "Kinetic Energy": {
+      const m=+vals.mass, v=+vals.velocity;
+      return [
+        { text: "KE = \xBD \xD7 m \xD7 v\xB2",              note: "formula" },
+        { text: `KE = 0.5 \xD7 ${n(m)} \xD7 ${n(v)}\xB2`,  note: "substitute" },
+        { text: `KE = 0.5 \xD7 ${n(m)} \xD7 ${n(v*v)}`,    note: "evaluate v\xB2" },
+        { text: `KE = 0.5 \xD7 ${n(m*v*v)}`,               note: "multiply" },
+        { text: `KE = ${n(result)} J`,                        note: "result", final: true },
+      ];
+    }
+    case "Ohm's Law": {
+      const I=+vals.current, R=+vals.resistance;
+      return [
+        { text: "V = I \xD7 R",                 note: "formula" },
+        { text: `V = ${n(I)} \xD7 ${n(R)}`,    note: "substitute" },
+        { text: `V = ${n(result)} V`,            note: "result", final: true },
+      ];
+    }
+    case "Power (Electrical)": {
+      const V=+vals.voltage, I=+vals.current;
+      return [
+        { text: "P = V \xD7 I",                 note: "formula" },
+        { text: `P = ${n(V)} \xD7 ${n(I)}`,    note: "substitute" },
+        { text: `P = ${n(result)} W`,            note: "result", final: true },
+      ];
+    }
+    case "Percentage": {
+      const val=+vals.value, tot=+vals.total;
+      return [
+        { text: "P = (value / total) \xD7 100",         note: "formula" },
+        { text: `P = (${n(val)} / ${n(tot)}) \xD7 100`, note: "substitute" },
+        { text: `P = ${n(val/tot)} \xD7 100`,            note: "divide" },
+        { text: `P = ${n(result)}%`,                      note: "result", final: true },
+      ];
+    }
+    case "Sphere Volume": {
+      const r=+vals.radius;
+      return [
+        { text: "V = (4/3) \xD7 \u03C0 \xD7 r\xB3",           note: "formula" },
+        { text: `V = (4/3) \xD7 \u03C0 \xD7 ${n(r)}\xB3`,     note: "substitute" },
+        { text: `V = (4/3) \xD7 \u03C0 \xD7 ${n(r**3)}`,      note: "evaluate r\xB3" },
+        { text: `V = (4/3) \xD7 ${n(Math.PI * r**3)}`,        note: "multiply \u03C0" },
+        { text: `V = ${n(result)} cu units`,                    note: "result", final: true },
+      ];
+    }
+    default:
+      return [{ text: `Result = ${n(result)}`, note: "result", final: true }];
+  }
+}
+
+// ── Calculate ─────────────────────────────────────────────────────────────────
+async function calculate() {
+  if (!activeFormula) return;
+  const inputs = fvBody.querySelectorAll(".input-field");
+  const values = {};
+  let firstEmpty = null;
+  for (const inp of inputs) {
+    inp.classList.remove("input-error");
+    if (inp.value.trim() === "") {
+      inp.classList.add("input-error");
+      if (!firstEmpty) firstEmpty = inp;
+    } else {
+      values[inp.dataset.param] = inp.value.trim();
+    }
+  }
+  if (firstEmpty) { firstEmpty.focus(); return; }
+
+  const card = document.getElementById("resultCard");
+  card.className = "result-card result-loading";
+  card.innerHTML = `<div class="spinner"></div>`;
+
+  try {
+    const res  = await fetch("/api/calculate", {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ formula: activeFormula, values }),
     });
-    const card = document.getElementById("resultCard");
-    if (card) card.hidden = true;
-    const first = fvBody.querySelector(".input-field");
-    if (first) first.focus();
+    const data = await res.json();
+
+    if (data.error) {
+      card.className = "result-card result-error";
+      card.innerHTML =
+        `<p class="result-label">Error</p>` +
+        `<p class="result-error-msg">${data.error}</p>`;
+    } else {
+      const steps = getSteps(activeFormula, values, data.result);
+      card.className = "result-card result-steps";
+      let html = `<p class="steps-label">Solution Steps</p><div class="steps-list">`;
+      steps.forEach((step, i) => {
+        const cls = "step-row" + (step.final ? " step-final" : "");
+        html +=
+          `<div class="${cls}" style="--i:${i}">` +
+            `<span class="step-num">${step.final ? "=" : i + 1}</span>` +
+            `<code class="step-text">${step.text}</code>` +
+            `<span class="step-note">${step.note}</span>` +
+          `</div>`;
+      });
+      html += `</div>`;
+      card.innerHTML = html;
+    }
+  } catch {
+    card.className = "result-card result-error";
+    card.innerHTML =
+      `<p class="result-label">Error</p>` +
+      `<p class="result-error-msg">Could not reach server.</p>`;
   }
+}
 
-  // Enter key triggers calculate
-  document.addEventListener("keydown", e => {
-    if (e.key === "Enter" && activeFormula) calculate();
+function clearForm() {
+  fvBody.querySelectorAll(".input-field").forEach(i => {
+    i.value = "";
+    i.classList.remove("input-error");
   });
+  const card = document.getElementById("resultCard");
+  if (card) card.className = "result-card result-hidden";
+  const first = fvBody.querySelector(".input-field");
+  if (first) first.focus();
+}
 
-  init();
-  </script>
+document.addEventListener("keydown", e => {
+  if (e.key === "Enter" && activeFormula) calculate();
+});
+
+init();
+</script>
 </body>
 </html>
