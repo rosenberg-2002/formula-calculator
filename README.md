@@ -1,6 +1,8 @@
 # Formula Calculator
 
-A Python desktop app with 16 built-in formulas across algebra, geometry, physics, finance, and more.
+A Python web app with 16 built-in formulas. Runs a local server and opens in your browser automatically — no external packages needed.
+
+## Formulas
 
 | Category | Formula | Equation |
 |---|---|---|
@@ -10,7 +12,7 @@ A Python desktop app with 16 built-in formulas across algebra, geometry, physics
 | Geometry | Triangle Area (Heron's) | `A = √(s(s-a)(s-b)(s-c))` |
 | Geometry | Pythagorean Theorem | `c = √(a² + b²)` |
 | Geometry | Sphere Volume | `V = (4/3)πr³` |
-| Coordinate | Distance Formula | `d = √((x₂-x₁)² + (y₂-y₁)²)` |
+| Geometry | Distance Formula | `d = √((x₂-x₁)² + (y₂-y₁)²)` |
 | Physics | Kinetic Energy | `KE = ½mv²` |
 | Physics | Ohm's Law | `V = I × R` |
 | Physics | Electrical Power | `P = V × I` |
@@ -19,12 +21,12 @@ A Python desktop app with 16 built-in formulas across algebra, geometry, physics
 | Temperature | Celsius → Fahrenheit | `F = (C × 9/5) + 32` |
 | Temperature | Fahrenheit → Celsius | `C = (F - 32) × 5/9` |
 | Health | BMI | `BMI = weight / height²` |
-| General | Percentage | `P = (Value / Total) × 100` |
+| Math | Percentage | `P = (Value / Total) × 100` |
 
 ## Requirements
 
-- Python 3.6+
-- tkinter (included with Python)
+- Python 3.8+
+- No external packages — uses Python's built-in `http.server`
 
 ## Run
 
@@ -34,13 +36,22 @@ cd formula-calculator
 python main.py
 ```
 
-Or download `Formula.Calculator.exe` from [Releases](https://github.com/rosenberg-2002/formula-calculator/releases) and run it directly — no Python needed.
+Your browser opens automatically at `http://127.0.0.1:5050`.
+
+## Features
+
+- Clean two-panel web UI — sidebar with search, main content area
+- **Step-by-step solutions** — every calculation shows the full working, animated
+- Cycling live demo on the home screen
+- Searchable formula list grouped by category
+- Press **Enter** to calculate from anywhere
 
 ## Usage
 
-1. Select a formula from the left panel
-2. Enter values in the input fields (Tab to move between fields)
-3. Press Enter or click **Calculate**
+1. Pick a formula from the sidebar
+2. Fill in the input fields
+3. Press **Enter** or click **Calculate**
+4. See the step-by-step solution animate in
 
 ## License
 
