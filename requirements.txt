@@ -1,0 +1,29 @@
+# Formula Calculator - Requirements
+# 
+# This project uses Python's built-in libraries:
+# - tkinter: GUI framework (comes with Python)
+# - math: Mathematical calculations
+#
+# No external packages required!
+# 
+# Installation:
+# 1. Ensure Python 3.6+ is installed
+# 2. tkinter usually comes with Python
+# 
+# If tkinter is missing on your system:
+# 
+# On Ubuntu/Debian:
+#   sudo apt-get install python3-tk
+#
+# On Fedora:
+#   sudo dnf install python3-tkinter
+#
+# On macOS (via Homebrew):
+#   brew install python-tk
+#
+# On Windows:
+#   tkinter is included with Python
+
+# Optional: For future enhancements
+# matplotlib>=3.0.0  # For plotting graphs
+# pillow>=7.0.0      # For image handling
