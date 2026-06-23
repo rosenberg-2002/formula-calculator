@@ -61,6 +61,188 @@
 </div>
 
 <script>
+// ── Static formula data (replaces /api/formulas) ─────────────────────────────
+const FORMULAS_DATA = {
+  "Quadratic Equation": {
+    description: "Solves quadratic equations of the form ax\u00B2 + bx + c = 0. Returns the first real root. Formula: x = (-b + \u221A(b\u00B2 - 4ac)) / 2a",
+    parameters: [{name:"a",unit:"coefficient"},{name:"b",unit:"coefficient"},{name:"c",unit:"coefficient"}],
+    output_unit: "", category: "Algebra"
+  },
+  "Pythagorean Theorem": {
+    description: "Calculates the hypotenuse of a right triangle. Formula: c = \u221A(a\u00B2 + b\u00B2)",
+    parameters: [{name:"a",unit:"units"},{name:"b",unit:"units"}],
+    output_unit: "units", category: "Geometry"
+  },
+  "Circle Area": {
+    description: "Calculates the area of a circle. Formula: A = \u03C0r\u00B2",
+    parameters: [{name:"radius",unit:"units"}],
+    output_unit: "sq units", category: "Geometry"
+  },
+  "Rectangle Area": {
+    description: "Calculates the area of a rectangle. Formula: A = length \u00D7 width",
+    parameters: [{name:"length",unit:"units"},{name:"width",unit:"units"}],
+    output_unit: "sq units", category: "Geometry"
+  },
+  "Triangle Area (Heron's Formula)": {
+    description: "Calculates the area of a triangle given three sides. Formula: A = \u221A(s(s-a)(s-b)(s-c)) where s = (a+b+c)/2",
+    parameters: [{name:"side_a",unit:"units"},{name:"side_b",unit:"units"},{name:"side_c",unit:"units"}],
+    output_unit: "sq units", category: "Geometry"
+  },
+  "Distance Formula": {
+    description: "Calculates the distance between two points in 2D space. Formula: d = \u221A((x\u2082-x\u2081)\u00B2 + (y\u2082-y\u2081)\u00B2)",
+    parameters: [{name:"x1",unit:"coordinate"},{name:"y1",unit:"coordinate"},{name:"x2",unit:"coordinate"},{name:"y2",unit:"coordinate"}],
+    output_unit: "units", category: "Geometry"
+  },
+  "Simple Interest": {
+    description: "Calculates simple interest. Formula: I = (P \u00D7 R \u00D7 T) / 100, where P=Principal, R=Rate (%), T=Time (years)",
+    parameters: [{name:"principal",unit:"currency"},{name:"rate",unit:"%/year"},{name:"time",unit:"years"}],
+    output_unit: "currency", category: "Finance"
+  },
+  "Compound Interest": {
+    description: "Calculates compound interest. Formula: A = P(1 + r/n)^(nt), where P=Principal, r=Rate, n=Compounds/year, t=Time (years)",
+    parameters: [{name:"principal",unit:"currency"},{name:"rate",unit:"%/year"},{name:"time",unit:"years"},{name:"compounds_per_year",unit:"frequency"}],
+    output_unit: "currency", category: "Finance"
+  },
+  "Celsius to Fahrenheit": {
+    description: "Converts temperature from Celsius to Fahrenheit. Formula: F = (C \u00D7 9/5) + 32",
+    parameters: [{name:"celsius",unit:"\u00B0C"}],
+    output_unit: "\u00B0F", category: "Temperature"
+  },
+  "Fahrenheit to Celsius": {
+    description: "Converts temperature from Fahrenheit to Celsius. Formula: C = (F - 32) \u00D7 5/9",
+    parameters: [{name:"fahrenheit",unit:"\u00B0F"}],
+    output_unit: "\u00B0C", category: "Temperature"
+  },
+  "Body Mass Index (BMI)": {
+    description: "Calculates BMI. Formula: BMI = weight / (height\u00B2), where weight is in kg and height is in meters",
+    parameters: [{name:"weight",unit:"kg"},{name:"height",unit:"m"}],
+    output_unit: "kg/m\u00B2", category: "Health"
+  },
+  "Kinetic Energy": {
+    description: "Calculates kinetic energy. Formula: KE = \u00BDmv\u00B2, where m=mass (kg), v=velocity (m/s)",
+    parameters: [{name:"mass",unit:"kg"},{name:"velocity",unit:"m/s"}],
+    output_unit: "Joules", category: "Physics"
+  },
+  "Ohm's Law": {
+    description: "Calculates voltage. Formula: V = I \u00D7 R, where I=Current (Amperes), R=Resistance (Ohms)",
+    parameters: [{name:"current",unit:"A"},{name:"resistance",unit:"\u03A9"}],
+    output_unit: "V", category: "Physics"
+  },
+  "Power (Electrical)": {
+    description: "Calculates electrical power. Formula: P = V \u00D7 I, where V=Voltage, I=Current",
+    parameters: [{name:"voltage",unit:"V"},{name:"current",unit:"A"}],
+    output_unit: "Watts", category: "Physics"
+  },
+  "Percentage": {
+    description: "Calculates percentage. Formula: P = (Value / Total) \u00D7 100",
+    parameters: [{name:"value",unit:"number"},{name:"total",unit:"number"}],
+    output_unit: "%", category: "Math"
+  },
+  "Sphere Volume": {
+    description: "Calculates the volume of a sphere. Formula: V = (4/3)\u03C0r\u00B3",
+    parameters: [{name:"radius",unit:"units"}],
+    output_unit: "cubic units", category: "Geometry"
+  },
+};
+
+// ── Local calculation (replaces /api/calculate) ───────────────────────────────
+function calculateFormula(name, vals) {
+  try {
+    let result;
+    switch (name) {
+      case "Quadratic Equation": {
+        const a=+vals.a, b=+vals.b, c=+vals.c;
+        const disc = b*b - 4*a*c;
+        if (disc < 0) throw new Error("No real roots (discriminant < 0)");
+        result = (-b + Math.sqrt(disc)) / (2*a);
+        break;
+      }
+      case "Pythagorean Theorem": {
+        const a=+vals.a, b=+vals.b;
+        result = Math.sqrt(a*a + b*b);
+        break;
+      }
+      case "Circle Area": {
+        const r=+vals.radius;
+        if (r < 0) throw new Error("Radius cannot be negative");
+        result = Math.PI * r * r;
+        break;
+      }
+      case "Rectangle Area": {
+        const l=+vals.length, w=+vals.width;
+        if (l < 0 || w < 0) throw new Error("Length and width must be positive");
+        result = l * w;
+        break;
+      }
+      case "Triangle Area (Heron's Formula)": {
+        const a=+vals.side_a, b=+vals.side_b, c=+vals.side_c;
+        if (a+b<=c || b+c<=a || a+c<=b) throw new Error("Invalid triangle: sides do not satisfy triangle inequality");
+        const s=(a+b+c)/2;
+        result = Math.sqrt(s*(s-a)*(s-b)*(s-c));
+        break;
+      }
+      case "Distance Formula": {
+        const x1=+vals.x1, y1=+vals.y1, x2=+vals.x2, y2=+vals.y2;
+        result = Math.sqrt((x2-x1)**2 + (y2-y1)**2);
+        break;
+      }
+      case "Simple Interest": {
+        const P=+vals.principal, R=+vals.rate, T=+vals.time;
+        result = (P*R*T)/100;
+        break;
+      }
+      case "Compound Interest": {
+        const P=+vals.principal, R=+vals.rate, T=+vals.time, N=+vals.compounds_per_year;
+        result = P * Math.pow(1+R/100/N, N*T) - P;
+        break;
+      }
+      case "Celsius to Fahrenheit": {
+        result = (+vals.celsius * 9/5) + 32;
+        break;
+      }
+      case "Fahrenheit to Celsius": {
+        result = (+vals.fahrenheit - 32) * 5/9;
+        break;
+      }
+      case "Body Mass Index (BMI)": {
+        const w=+vals.weight, h=+vals.height;
+        if (h <= 0) throw new Error("Height must be positive");
+        result = w / (h*h);
+        break;
+      }
+      case "Kinetic Energy": {
+        result = 0.5 * (+vals.mass) * (+vals.velocity)**2;
+        break;
+      }
+      case "Ohm's Law": {
+        result = (+vals.current) * (+vals.resistance);
+        break;
+      }
+      case "Power (Electrical)": {
+        result = (+vals.voltage) * (+vals.current);
+        break;
+      }
+      case "Percentage": {
+        const tot=+vals.total;
+        if (tot === 0) throw new Error("Total cannot be zero");
+        result = (+vals.value / tot) * 100;
+        break;
+      }
+      case "Sphere Volume": {
+        const r=+vals.radius;
+        if (r < 0) throw new Error("Radius cannot be negative");
+        result = (4/3) * Math.PI * r**3;
+        break;
+      }
+      default:
+        throw new Error("Unknown formula: " + name);
+    }
+    return { result };
+  } catch(e) {
+    return { error: e.message };
+  }
+}
+
 // ── Category metadata ────────────────────────────────────────────────────────
 const CAT_META = {
   Algebra:     { color: "#7c3aed", bg: "#f5f3ff", icon: "x\xB2" },
@@ -158,9 +340,8 @@ const fvHeader    = document.getElementById("fvHeader");
 const fvBody      = document.getElementById("fvBody");
 
 // ── Init ─────────────────────────────────────────────────────────────────────
-async function init() {
-  const res = await fetch("/api/formulas");
-  formulas  = await res.json();
+function init() {
+  formulas = FORMULAS_DATA;
   buildList("");
   runDemo();
 }
@@ -440,7 +621,7 @@ function getSteps(name, vals, result) {
 }
 
 // ── Calculate ─────────────────────────────────────────────────────────────────
-async function calculate() {
+function calculate() {
   if (!activeFormula) return;
   const inputs = fvBody.querySelectorAll(".input-field");
   const values = {};
@@ -461,12 +642,7 @@ async function calculate() {
   card.innerHTML = `<div class="spinner"></div>`;
 
   try {
-    const res  = await fetch("/api/calculate", {
-      method:  "POST",
-      headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ formula: activeFormula, values }),
-    });
-    const data = await res.json();
+    const data = calculateFormula(activeFormula, values);
 
     if (data.error) {
       card.className = "result-card result-error";
@@ -489,11 +665,11 @@ async function calculate() {
       html += `</div>`;
       card.innerHTML = html;
     }
-  } catch {
+  } catch(e) {
     card.className = "result-card result-error";
     card.innerHTML =
       `<p class="result-label">Error</p>` +
-      `<p class="result-error-msg">Could not reach server.</p>`;
+      `<p class="result-error-msg">${e.message}</p>`;
   }
 }
 
