@@ -6,6 +6,13 @@
   <title>Formula Calculator</title>
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="style.css" />
+  <style>
+    .bmi-gauge-wrap { margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0; }
+    .bmi-gauge-svg  { width: 100%; max-width: 300px; display: block; margin: 0 auto 4px; overflow: visible; }
+    .bmi-readout    { text-align: center; font-size: 16px; font-weight: 600; color: #1e293b; margin: 4px 0 12px; }
+    .bmi-stats-list { font-size: 13px; color: #475569; line-height: 1.9; margin: 0; padding-left: 20px; }
+    .bmi-stats-list li::marker { color: #6366f1; }
+  </style>
 </head>
 <body>
 <div class="app">
@@ -115,8 +122,8 @@ const FORMULAS_DATA = {
     output_unit: "\u00B0C", category: "Temperature"
   },
   "Body Mass Index (BMI)": {
-    description: "Calculates BMI. Formula: BMI = weight / (height\u00B2), where weight is in kg and height is in meters",
-    parameters: [{name:"weight",unit:"kg"},{name:"height",unit:"m"}],
+    description: "Calculates BMI. Formula: BMI = weight(kg) / height(m)\u00B2. Enter height in centimeters.",
+    parameters: [{name:"weight",unit:"kg"},{name:"height",unit:"cm"}],
     output_unit: "kg/m\u00B2", category: "Health"
   },
   "Kinetic Energy": {
@@ -208,7 +215,8 @@ function calculateFormula(name, vals) {
       case "Body Mass Index (BMI)": {
         const w=+vals.weight, h=+vals.height;
         if (h <= 0) throw new Error("Height must be positive");
-        result = w / (h*h);
+        const hm = h / 100;
+        result = w / (hm * hm);
         break;
       }
       case "Kinetic Energy": {
@@ -563,12 +571,13 @@ function getSteps(name, vals, result) {
       ];
     }
     case "Body Mass Index (BMI)": {
-      const w=+vals.weight, h=+vals.height;
+      const w=+vals.weight, h=+vals.height, hm=h/100;
       return [
-        { text: "BMI = weight / height\xB2",      note: "formula" },
-        { text: `BMI = ${n(w)} / ${n(h)}\xB2`,   note: "substitute" },
-        { text: `BMI = ${n(w)} / ${n(h*h)}`,     note: "evaluate h\xB2" },
-        { text: `BMI = ${n(result)} kg/m\xB2`,    note: "result", final: true },
+        { text: "BMI = weight / height\xB2",                     note: "formula"        },
+        { text: `height = ${n(h)} cm \xF7 100 = ${n(hm)} m`,    note: "convert to m"   },
+        { text: `BMI = ${n(w)} / ${n(hm)}\xB2`,                 note: "substitute"     },
+        { text: `BMI = ${n(w)} / ${n(hm*hm)}`,                  note: "evaluate h\xB2" },
+        { text: `BMI = ${n(result)} kg/m\xB2`,                  note: "result", final: true },
       ];
     }
     case "Kinetic Energy": {
@@ -621,6 +630,102 @@ function getSteps(name, vals, result) {
   }
 }
 
+// ── BMI Gauge ───────────────────────────────────────────────────────────────────
+function renderBMIGauge(bmi, weight, heightCm) {
+  const cx = 150, cy = 165;
+  const outerR = 112, innerR = 70;
+  const midR = (outerR + innerR) / 2;
+  const sw = outerR - innerR;
+  const BMI_MIN = 10, BMI_MAX = 42;
+
+  function toAngle(b) {
+    return 180 - Math.max(0, Math.min(1, (b - BMI_MIN) / (BMI_MAX - BMI_MIN))) * 180;
+  }
+  function svgPt(r, deg) {
+    const rad = deg * Math.PI / 180;
+    return { x: cx + r * Math.cos(rad), y: cy - r * Math.sin(rad) };
+  }
+  function arcD(b1, b2) {
+    const a1 = toAngle(b1), a2 = toAngle(b2);
+    const p1 = svgPt(midR, a1), p2 = svgPt(midR, a2);
+    return `M ${p1.x.toFixed(1)} ${p1.y.toFixed(1)} A ${midR} ${midR} 0 0 1 ${p2.x.toFixed(1)} ${p2.y.toFixed(1)}`;
+  }
+
+  const segs = [
+    [10,   16,   '#dc2626'],
+    [16,   18.5, '#ef4444'],
+    [18.5, 25,   '#22c55e'],
+    [25,   30,   '#eab308'],
+    [30,   35,   '#f97316'],
+    [35,   42,   '#b91c1c'],
+  ];
+  const arcsSVG = segs.map(([b1, b2, col]) =>
+    `<path d="${arcD(b1, b2)}" stroke="${col}" stroke-width="${sw}" fill="none" stroke-linecap="butt"/>`
+  ).join('');
+
+  const divSVG = [16, 18.5, 25, 30, 35].map(v => {
+    const a = toAngle(v);
+    const p1 = svgPt(innerR, a), p2 = svgPt(outerR, a);
+    return `<line x1="${p1.x.toFixed(1)}" y1="${p1.y.toFixed(1)}" x2="${p2.x.toFixed(1)}" y2="${p2.y.toFixed(1)}" stroke="#fff" stroke-width="2.5"/>`;
+  }).join('');
+
+  const lblSVG = [16, 18.5, 25, 30, 35].map(v => {
+    const p = svgPt(outerR + 16, toAngle(v));
+    return `<text x="${p.x.toFixed(1)}" y="${p.y.toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="9" font-weight="600" fill="#4b5563">${v}</text>`;
+  }).join('');
+
+  const catSVG = [
+    [18.5, 25, 'Normal',     '#fff'],
+    [25,   30, 'Overweight', '#1e293b'],
+    [30,   35, 'Obese',      '#fff'],
+  ].map(([b1, b2, label, col], i) => {
+    const pid = `bmi-arc-${i}`;
+    return `<defs><path id="${pid}" d="${arcD(b1, b2)}"/></defs><text font-size="8" font-weight="700" fill="${col}"><textPath href="#${pid}" startOffset="50%" text-anchor="middle">${label}</textPath></text>`;
+  }).join('');
+
+  const clamped = Math.max(BMI_MIN, Math.min(BMI_MAX, bmi));
+  const needlePt = svgPt(outerR - 6, toAngle(clamped));
+
+  const cat = bmi < 16   ? { label: 'Severely Underweight', color: '#dc2626' }
+    : bmi < 18.5 ? { label: 'Underweight',           color: '#ef4444' }
+    : bmi < 25   ? { label: 'Normal',                 color: '#16a34a' }
+    : bmi < 30   ? { label: 'Overweight',             color: '#d97706' }
+    : bmi < 35   ? { label: 'Obese',                  color: '#ea580c' }
+    :              { label: 'Severely Obese',          color: '#991b1b' };
+
+  const hm = heightCm / 100;
+  const wMin  = (18.5 * hm * hm).toFixed(1);
+  const wMax  = (25   * hm * hm).toFixed(1);
+  const prime = (bmi / 25).toFixed(2);
+  const pond  = (weight / Math.pow(hm, 3)).toFixed(1);
+
+  let advice;
+  if (bmi < 18.5) {
+    advice = `Gain ${(18.5 * hm * hm - weight).toFixed(1)}\u2009kg to reach BMI 18.5\u202fkg/m\u00B2`;
+  } else if (bmi >= 25) {
+    advice = `Lose ${(weight - 25 * hm * hm).toFixed(1)}\u2009kg to reach BMI 25\u202fkg/m\u00B2`;
+  } else {
+    advice = 'You are in the healthy BMI range \u2713';
+  }
+
+  return `<div class="bmi-gauge-wrap">
+    <svg class="bmi-gauge-svg" viewBox="0 0 300 180" overflow="visible">
+      ${arcsSVG}${catSVG}${divSVG}${lblSVG}
+      <line x1="${cx}" y1="${cy}" x2="${needlePt.x.toFixed(1)}" y2="${needlePt.y.toFixed(1)}" stroke="#1e293b" stroke-width="3.5" stroke-linecap="round"/>
+      <circle cx="${cx}" cy="${cy}" r="8" fill="#1e293b"/>
+      <circle cx="${cx}" cy="${cy}" r="3.5" fill="#f1f5f9"/>
+    </svg>
+    <p class="bmi-readout"><strong>${n(bmi)}\u202fkg/m\u00B2</strong> \u2014 <span style="color:${cat.color}">${cat.label}</span></p>
+    <ul class="bmi-stats-list">
+      <li>Healthy BMI range: 18.5 \u2013 25\u202fkg/m\u00B2</li>
+      <li>Healthy weight for your height: ${wMin} \u2013 ${wMax}\u202fkg</li>
+      <li>${advice}</li>
+      <li>BMI Prime: ${prime}</li>
+      <li>Ponderal Index: ${pond}\u202fkg/m\u00B3</li>
+    </ul>
+  </div>`;
+}
+
 // ── Calculate ─────────────────────────────────────────────────────────────────
 function calculate() {
   if (!activeFormula) return;
@@ -664,6 +769,9 @@ function calculate() {
           `</div>`;
       });
       html += `</div>`;
+      if (activeFormula === "Body Mass Index (BMI)") {
+        html += renderBMIGauge(data.result, +values.weight, +values.height);
+      }
       card.innerHTML = html;
     }
   } catch(e) {

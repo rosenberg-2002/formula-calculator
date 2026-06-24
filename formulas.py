@@ -91,10 +91,10 @@ FORMULAS = {
         "output_unit": "°C"
     },
     "Body Mass Index (BMI)": {
-        "description": "Calculates BMI. Formula: BMI = weight / (height²), where weight is in kg and height is in meters",
+        "description": "Calculates BMI. Formula: BMI = weight(kg) / height(m)\u00B2. Enter height in centimeters.",
         "parameters": [
             {"name": "weight", "unit": "kg"},
-            {"name": "height", "unit": "m"}
+            {"name": "height", "unit": "cm"}
         ],
         "output_unit": "kg/m²"
     },
@@ -219,7 +219,8 @@ def calculate_formula(formula_name, values):
         weight, height = values["weight"], values["height"]
         if height <= 0:
             raise ValueError("Height must be positive")
-        return weight / (height**2)
+        height_m = height / 100
+        return weight / (height_m ** 2)
     
     elif formula_name == "Kinetic Energy":
         mass, velocity = values["mass"], values["velocity"]
